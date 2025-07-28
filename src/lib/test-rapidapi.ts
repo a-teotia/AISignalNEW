@@ -77,16 +77,22 @@ async function testRapidAPI() {
   }
   
   // Test the data provider class
-  console.log('🔧 Testing FinancialDataProvider class...');
+  console.log('🔧 Testing getMarketData function...');
+  
   try {
-    const { FinancialDataProvider } = await import('./data-providers');
-    const data = await FinancialDataProvider.getMarketData('AAPL');
-    console.log(`   ✅ DataProvider result for AAPL:`);
-    console.log(`   Price: $${data.price}`);
-    console.log(`   Source: ${data.source}`);
-    console.log(`   Change: $${data.change} (${data.changePercent}%)`);
+    const { getMarketData } = await import('./data-providers');
+    const data = await getMarketData('AAPL');
+    
+    if (data) {
+      console.log(`   ✅ getMarketData result for AAPL:`);
+      console.log(`   Price: $${data.price}`);
+      console.log(`   Source: ${data.source}`);
+      console.log(`   Change: $${data.change} (${data.changePercent}%)`);
+    } else {
+      console.log(`   ❌ No data returned for AAPL`);
+    }
   } catch (error) {
-    console.log(`   ❌ DataProvider error: ${error}`);
+    console.log(`   ❌ getMarketData error: ${error}`);
   }
 }
 

@@ -1,27 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { FinancialDataProvider } from '@/lib/data-providers';
+import { getMarketData } from '@/lib/data-providers';
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const symbol = searchParams.get('symbol') || 'AAPL';
+
   try {
-    const { symbol } = await request.json();
+    console.log(`🧪 Test Market Data API: Testing with ${symbol}`);
+    const startTime = Date.now();
     
-    if (!symbol) {
-      return NextResponse.json({ error: 'Symbol is required' }, { status: 400 });
+    const data = await getMarketData(symbol);
+    
+    const processingTime = Date.now() - startTime;
+    
+    if (!data) {
+      return NextResponse.json(
+        { 
+          error: 'No market data available for this symbol', 
+          symbol 
+        },
+        { status: 404 }
+      );
     }
-
-    const data = await FinancialDataProvider.getMarketData(symbol);
-
+    
     return NextResponse.json({
       success: true,
       symbol,
       data,
-      timestamp: new Date().toISOString()
+      processingTime,
+      timestamp: new Date().toISOString(),
+      message: `Test market data retrieved for ${symbol} from ${data.source}`
     });
-
+    
   } catch (error) {
-    console.error('Error testing market data:', error);
+    console.error('Error in test-market-data API:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch market data', details: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        error: 'Failed to get test market data', 
+        details: error instanceof Error ? error.message : 'Unknown error',
+        symbol 
+      },
       { status: 500 }
     );
   }

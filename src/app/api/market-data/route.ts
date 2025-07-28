@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { FinancialDataProvider } from '../../../lib/data-providers';
+import { getMarketData } from '../../../lib/data-providers';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -13,9 +13,19 @@ export async function GET(request: NextRequest) {
     console.log(`📊 API: Getting real market data for ${symbol}`);
     const startTime = Date.now();
     
-    const marketData = await FinancialDataProvider.getMarketData(symbol);
+    const marketData = await getMarketData(symbol);
     
     const processingTime = Date.now() - startTime;
+    
+    if (!marketData) {
+      return NextResponse.json(
+        { 
+          error: 'No market data available for this symbol', 
+          symbol 
+        },
+        { status: 404 }
+      );
+    }
     
     return NextResponse.json({
       success: true,
