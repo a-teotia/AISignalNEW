@@ -227,41 +227,42 @@ export class SonarResearchAgent extends BaseAgent {
   }
 
   private transformScrapedDataToResearchData(scrapedData: any) {
-    // Transform comprehensive scraped data into research format
-    const sentiment = this.analyzeSentiment(scrapedData.sentimentData);
+    // Transform comprehensive data from CentralizedDataProvider into research format
+    const sentiment = this.analyzeSentiment(scrapedData);
     
     return {
-      background: `${scrapedData.symbol} analysis based on comprehensive market data`,
+      background: `${scrapedData.marketData?.symbol || 'Unknown'} analysis based on comprehensive market data`,
       filings: [],
-      news: scrapedData.sentimentData.news.map((n: any) => n.headline),
+      news: scrapedData.newsData?.articles?.map((n: any) => n.title) || [],
       executives: [],
       products: [],
       sentiment: {
         overall: sentiment,
-        newsSentiment: this.calculateNewsSentiment(scrapedData.sentimentData.news),
-        socialSentiment: this.calculateSocialSentiment(scrapedData.sentimentData.socialMedia),
+        newsSentiment: this.calculateNewsSentiment(scrapedData.newsData?.articles || []),
+        socialSentiment: this.calculateSocialSentiment([]), // No social media data in new structure
         analystRating: "hold"
       },
       geopolitical: {
-        economicFactors: scrapedData.geopoliticalData.economicFactors || ['Stable economic conditions'],
-        politicalRisks: scrapedData.geopoliticalData.politicalRisks || ['Low political risk'],
-        socialTrends: scrapedData.geopoliticalData.socialTrends || ['Neutral social sentiment'],
-        globalImpact: scrapedData.geopoliticalData.globalImpact || 'neutral',
-        riskLevel: scrapedData.geopoliticalData.riskLevel || 'low'
+        economicFactors: ['Stable economic conditions'],
+        politicalRisks: ['Low political risk'],
+        socialTrends: ['Neutral social sentiment'],
+        globalImpact: 'neutral',
+        riskLevel: 'low'
       },
-      keyEvents: scrapedData.geopoliticalData.events.map((e: any) => ({
-        date: e.date,
-        event: e.event,
-        impact: e.impact
-      })),
+      keyEvents: [],
       confidence: 75,
-      sources: ['Reuters', 'Bloomberg', 'CNBC', 'Social Media Analysis']
+      sources: ['Yahoo Finance', 'Market Analysis']
     };
   }
 
-  private analyzeSentiment(sentimentData: any): string {
-    const newsSentiment = this.calculateNewsSentiment(sentimentData.news);
-    const socialSentiment = this.calculateSocialSentiment(sentimentData.socialMedia);
+  private analyzeSentiment(data: any): string {
+    // Handle case where data structure is different
+    if (!data || !data.newsData) {
+      return 'neutral';
+    }
+    
+    const newsSentiment = this.calculateNewsSentiment(data.newsData.articles || []);
+    const socialSentiment = 0.5; // Default neutral for social media
     const avgSentiment = (newsSentiment + socialSentiment) / 2;
     
     if (avgSentiment > 0.6) return 'bullish';
@@ -270,17 +271,17 @@ export class SonarResearchAgent extends BaseAgent {
   }
 
   private calculateNewsSentiment(news: any[]): number {
-    if (!news.length) return 0.5;
+    if (!news || !news.length) return 0.5;
     const sentimentScores = news.map(n => {
-      if (n.sentiment === 'bullish') return n.impact;
-      if (n.sentiment === 'bearish') return 1 - n.impact;
+      if (n.sentiment === 'bullish') return n.impact || 0.7;
+      if (n.sentiment === 'bearish') return 1 - (n.impact || 0.7);
       return 0.5;
     });
     return sentimentScores.reduce((a, b) => a + b, 0) / sentimentScores.length;
   }
 
   private calculateSocialSentiment(socialMedia: any[]): number {
-    if (!socialMedia.length) return 0.5;
+    if (!socialMedia || !socialMedia.length) return 0.5;
     const sentimentScores = socialMedia.map(s => {
       if (s.sentiment === 'bullish') return 0.7;
       if (s.sentiment === 'bearish') return 0.3;

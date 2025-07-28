@@ -124,13 +124,15 @@ export class CentralizedDataProvider {
       const overallQuality = this.determineOverallQuality(qualities);
       
       // Verify data consistency
-      const verification = await this.verificationSystem.verifyData({
+      const comprehensiveData = {
         symbol,
         marketData,
         technicalData,
         newsData,
         cryptoData
-      });
+      };
+      
+      const verification = await this.verificationSystem.verifyData(symbol, comprehensiveData);
       
       if (verification.conflicts.length > 0) {
         warnings.push(`Data conflicts detected: ${verification.conflicts.join(', ')}`);

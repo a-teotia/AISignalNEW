@@ -52,18 +52,31 @@ export class DataVerificationSystem {
   /**
    * Verify data across multiple sources
    */
-  async verifyData(symbol: string, primaryData: ComprehensiveData): Promise<VerificationResult> {
+  async verifyData(symbol: string, primaryData: any): Promise<VerificationResult> {
+    // Handle case where primaryData is undefined or doesn't have expected structure
+    if (!primaryData || !primaryData.marketData) {
+      return {
+        verified: false,
+        confidence: 0,
+        conflicts: ['No primary data available'],
+        consensus: null,
+        sources: [],
+        verificationScore: 0
+      };
+    }
+
+    // Create primary source
+    const primarySource: DataSource = {
+      name: 'primary',
+      reliability: 90,
+      lastUpdated: new Date().toISOString(),
+      data: primaryData,
+      quality: primaryData.marketData.quality === 'realtime' ? 100 : 80,
+      latency: 0
+    };
+
     const secondaryData = this.secondarySources.get(symbol) || new Map<string, DataSource>();
-    const allSources: DataSource[] = [
-      {
-        name: 'Primary',
-        reliability: 90,
-        lastUpdated: new Date().toISOString(),
-        data: primaryData,
-        quality: primaryData.marketData.quality === 'realtime' ? 100 : 80,
-        latency: 0
-      }
-    ];
+    const allSources: DataSource[] = [primarySource];
 
     // Add secondary sources
     secondaryData.forEach((source: DataSource) => {
