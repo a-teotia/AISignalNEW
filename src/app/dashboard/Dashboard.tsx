@@ -409,20 +409,24 @@ export default function Dashboard() {
 
   const calculateTakeProfit = (entryPrice: number, direction: string): number => {
     if (direction === 'UP') {
-      return entryPrice * 1.03; // 3% profit target
+      return entryPrice * 1.03; // 3% profit target ABOVE entry for longs
     } else if (direction === 'DOWN') {
-      return entryPrice * 0.97; // 3% profit target for short
+      return entryPrice * 0.97; // 3% profit target BELOW entry for shorts
+    } else {
+      // SIDEWAYS/NEUTRAL: Very tight profit target as warning
+      return entryPrice * 1.01; // 1% minimal profit target
     }
-    return entryPrice;
   };
 
   const calculateStopLoss = (entryPrice: number, direction: string): number => {
     if (direction === 'UP') {
-      return entryPrice * 0.98; // 2% stop loss
+      return entryPrice * 0.98; // 2% stop loss BELOW entry for longs
     } else if (direction === 'DOWN') {
-      return entryPrice * 1.02; // 2% stop loss for short
+      return entryPrice * 1.02; // 2% stop loss ABOVE entry for shorts
+    } else {
+      // SIDEWAYS/NEUTRAL: Very tight stop loss as warning
+      return entryPrice * 0.99; // 1% minimal stop loss
     }
-    return entryPrice;
   };
 
   const getTimeframeForStyle = (style: string): string => {

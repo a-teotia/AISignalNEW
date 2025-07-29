@@ -77,16 +77,164 @@ export interface ComprehensiveData {
 
 export class CentralizedDataProvider {
   private static readonly RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
+  private static readonly TWELVEDATA_KEY = '3c7da267bcc24e8d8e2dfde0e257378b';
   
-  // Cache for data with 5-minute TTL
+  // Cache for data with optimized TTL for rate limiting
   private static cache = new Map<string, { data: any; timestamp: number; quality: string }>();
-  private static readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  private static readonly CACHE_TTL = 2 * 60 * 1000; // 2 minutes for rate limit compliance
+  private static readonly STALE_CACHE_TTL = 10 * 60 * 1000; // 10 minutes for stale cache
+  private static readonly AGGRESSIVE_CACHE_TTL = 30 * 1000; // 30 seconds for high-frequency symbols
   
   // API health tracking
   private static apiHealth = new Map<string, { lastSuccess: number; lastFailure: number; successRate: number; calls: number }>();
   
   // Data verification system
   private static verificationSystem = new DataVerificationSystem();
+
+  // ===== RATE LIMITING SYSTEM =====
+  private static readonly RATE_LIMIT = 10; // 10 requests per second
+  private static readonly RATE_WINDOW = 1000; // 1 second in ms
+  private static requestQueue: Array<{ resolve: Function; reject: Function; request: Function }> = [];
+  private static requestTimes: number[] = [];
+  private static isProcessingQueue = false;
+
+  // ===== TWELVEDATA RATE LIMITING SYSTEM =====
+  private static readonly TWELVEDATA_RATE_LIMIT = 8; // 8 requests per minute
+  private static readonly TWELVEDATA_RATE_WINDOW = 60 * 1000; // 1 minute in ms
+  private static twelveDataRequestQueue: Array<{ resolve: Function; reject: Function; request: Function }> = [];
+  private static twelveDataRequestTimes: number[] = [];
+  private static isProcessingTwelveDataQueue = false;
+
+  /**
+   * Rate-limited API request wrapper
+   */
+  private static async rateLimitedRequest<T>(requestFn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.requestQueue.push({ resolve, reject, request: requestFn });
+      if (!this.isProcessingQueue) {
+        this.processRequestQueue();
+      }
+    });
+  }
+
+  /**
+   * Process queued requests with rate limiting
+   */
+  private static async processRequestQueue(): Promise<void> {
+    if (this.isProcessingQueue) return;
+    this.isProcessingQueue = true;
+
+    while (this.requestQueue.length > 0) {
+      const now = Date.now();
+      
+      // Clean old timestamps outside the rate window
+      this.requestTimes = this.requestTimes.filter(time => now - time < this.RATE_WINDOW);
+      
+      // Check if we can make a request
+      if (this.requestTimes.length < this.RATE_LIMIT) {
+        const { resolve, reject, request } = this.requestQueue.shift()!;
+        this.requestTimes.push(now);
+        
+        try {
+          const result = await request();
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      } else {
+        // Calculate how long to wait
+        const oldestRequest = this.requestTimes[0];
+        const waitTime = this.RATE_WINDOW - (now - oldestRequest);
+        console.log(`⏱️ Rate limit reached, waiting ${waitTime}ms before next request`);
+        await new Promise(resolve => setTimeout(resolve, waitTime + 10)); // +10ms buffer
+      }
+    }
+
+    this.isProcessingQueue = false;
+  }
+
+  /**
+   * Rate-limited TwelveData API request wrapper (8 calls per minute)
+   */
+  private static async twelveDataRateLimitedRequest<T>(requestFn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.twelveDataRequestQueue.push({ resolve, reject, request: requestFn });
+      if (!this.isProcessingTwelveDataQueue) {
+        this.processTwelveDataRequestQueue();
+      }
+    });
+  }
+
+  private static async processTwelveDataRequestQueue(): Promise<void> {
+    this.isProcessingTwelveDataQueue = true;
+
+    while (this.twelveDataRequestQueue.length > 0) {
+      const now = Date.now();
+      
+      // Clean up old request times
+      this.twelveDataRequestTimes = this.twelveDataRequestTimes.filter(time => now - time < this.TWELVEDATA_RATE_WINDOW);
+      
+      // If we haven't hit the rate limit, process the request
+      if (this.twelveDataRequestTimes.length < this.TWELVEDATA_RATE_LIMIT) {
+        const { resolve, reject, request } = this.twelveDataRequestQueue.shift()!;
+        this.twelveDataRequestTimes.push(now);
+        
+        try {
+          const result = await request();
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      } else {
+        // Calculate how long to wait (TwelveData is 8 requests per minute)
+        const oldestRequest = this.twelveDataRequestTimes[0];
+        const waitTime = this.TWELVEDATA_RATE_WINDOW - (now - oldestRequest);
+        console.log(`⏱️ TwelveData rate limit reached, waiting ${Math.round(waitTime/1000)}s before next request`);
+        await new Promise(resolve => setTimeout(resolve, waitTime + 1000)); // +1s buffer
+      }
+    }
+
+    this.isProcessingTwelveDataQueue = false;
+  }
+
+  /**
+   * Check cache first to avoid unnecessary API calls
+   */
+  private static getCachedData(cacheKey: string): { data: any; timestamp: number; quality: string } | null {
+    const cached = this.cache.get(cacheKey);
+    if (!cached) return null;
+
+    const now = Date.now();
+    const age = now - cached.timestamp;
+
+    // Fresh cache
+    if (age < this.CACHE_TTL) {
+      console.log(`📦 Using fresh cache for ${cacheKey} (${Math.round(age/1000)}s old)`);
+      return { ...cached, quality: 'cached' };
+    }
+
+    // Stale cache (still usable to avoid rate limits)
+    if (age < this.STALE_CACHE_TTL) {
+      console.log(`⏰ Using stale cache for ${cacheKey} (${Math.round(age/1000)}s old)`);
+      return { ...cached, quality: 'stale_cache' };
+    }
+
+    // Cache expired
+    this.cache.delete(cacheKey);
+    return null;
+  }
+
+  /**
+   * Store data in cache with timestamp
+   */
+  private static setCachedData(cacheKey: string, data: any, quality: string = 'realtime'): void {
+    this.cache.set(cacheKey, {
+      data,
+      timestamp: Date.now(),
+      quality
+    });
+    console.log(`💾 Cached ${quality} data for ${cacheKey}`);
+  }
 
   /**
    * Get comprehensive data for a symbol using Yahoo Finance APIs
@@ -95,7 +243,18 @@ export class CentralizedDataProvider {
     const warnings: string[] = [];
     const sources: string[] = [];
     
+    // Check if we have cached comprehensive data first
+    const cacheKey = `comprehensive_${symbol}`;
+    const cachedData = this.getCachedData(cacheKey);
+    
+    if (cachedData) {
+      console.log(`🚀 Returning cached comprehensive data for ${symbol}`);
+      return cachedData.data;
+    }
+    
     try {
+      console.log(`🔄 Fetching fresh comprehensive data for ${symbol}...`);
+      
       // Get market data with Yahoo Finance priority
       const marketData = await this.getMarketDataWithFallback(symbol);
       sources.push(marketData.source);
@@ -138,7 +297,7 @@ export class CentralizedDataProvider {
         warnings.push(`Data conflicts detected: ${verification.conflicts.join(', ')}`);
       }
       
-      return {
+      const comprehensiveResult = {
         marketData,
         technicalData,
         newsData,
@@ -149,6 +308,11 @@ export class CentralizedDataProvider {
         warnings,
         verification
       };
+      
+      // Cache the comprehensive result
+      this.setCachedData(cacheKey, comprehensiveResult, overallQuality);
+      
+      return comprehensiveResult;
       
     } catch (error) {
       console.error('Error getting comprehensive data:', error);
@@ -194,30 +358,38 @@ export class CentralizedDataProvider {
   }
 
   private static async getTechnicalDataWithFallback(symbol: string): Promise<TechnicalData | undefined> {
-    // Priority 1: Yahoo Finance Statistics Data
+    // Priority 1: TwelveData Professional Technical Indicators API
+    const twelveDataTechnicals = await this.getTwelveDataTechnicalIndicators(symbol);
+    if (twelveDataTechnicals) {
+      this.updateApiHealth('twelvedata_technicals', true);
+      return twelveDataTechnicals;
+    }
+
+    // Priority 2: Yahoo Finance Statistics Data  
     const yahooStatisticsData = await this.getYahooStatisticsData(symbol);
     if (yahooStatisticsData) {
       this.updateApiHealth('yahoo_statistics', true);
       return yahooStatisticsData;
     }
 
-    // Priority 2: Yahoo Finance Analysis Data
+    // Priority 3: Yahoo Finance Analysis Data
     const yahooAnalysisData = await this.getYahooAnalysisData(symbol);
     if (yahooAnalysisData) {
       this.updateApiHealth('yahoo_analysis', true);
       return yahooAnalysisData;
     }
 
-    // Priority 3: Yahoo Finance Insights Data
+    // Priority 4: Yahoo Finance Insights Data
     const yahooInsightsData = await this.getYahooInsightsData(symbol);
     if (yahooInsightsData) {
       this.updateApiHealth('yahoo_insights', true);
       return yahooInsightsData;
     }
 
-    // Priority 4: Enhanced fallback with realistic technical data
+    // Priority 5: Manual calculation fallback using historical data
+    console.warn(`⚠️ All technical APIs failed for ${symbol}, using manual calculations as final fallback`);
     this.updateApiHealth('fallback', false);
-    return this.getEnhancedTechnicalData(symbol);
+    return this.getManualTechnicalCalculations(symbol);
   }
 
   private static async getNewsDataWithFallback(symbol: string): Promise<NewsData | undefined> {
@@ -297,12 +469,15 @@ export class CentralizedDataProvider {
     if (!this.RAPIDAPI_KEY) return null;
 
     try {
-      const response = await fetch(`https://yahoo-finance-real-time1.p.rapidapi.com/stock/get-chart?symbol=${symbol}&region=US&lang=en-US&useYfid=true&includeAdjustedClose=true&events=div%2Csplit%2Cearn&range=1d&interval=1m&includePrePost=false`, {
-        headers: {
-          'X-RapidAPI-Key': this.RAPIDAPI_KEY,
-          'X-RapidAPI-Host': 'yahoo-finance-real-time1.p.rapidapi.com'
-        }
-      });
+      // Use rate-limited request
+      const response = await this.rateLimitedRequest(() => 
+        fetch(`https://yahoo-finance-real-time1.p.rapidapi.com/stock/get-chart?symbol=${symbol}&region=US&lang=en-US&useYfid=true&includeAdjustedClose=true&events=div%2Csplit%2Cearn&range=1d&interval=1m&includePrePost=false`, {
+          headers: {
+            'X-RapidAPI-Key': this.RAPIDAPI_KEY!,
+            'X-RapidAPI-Host': 'yahoo-finance-real-time1.p.rapidapi.com'
+          }
+        })
+      );
       
       if (!response.ok) return null;
       
@@ -383,11 +558,24 @@ export class CentralizedDataProvider {
       
       if (!data || !data.statistics) return null;
 
-      // Calculate technical indicators from statistics
-      const rsi = 50 + (Math.random() - 0.5) * 40; // Placeholder calculation
-      const macd = { value: (Math.random() - 0.5) * 2, signal: (Math.random() - 0.5) * 1.5, histogram: (Math.random() - 0.5) * 0.5 };
-      const sma = { sma20: data.statistics.sma20 || 0, sma50: data.statistics.sma50 || 0, sma200: data.statistics.sma200 || 0 };
-      const bollinger = { upper: data.statistics.bollingerUpper || 0, middle: data.statistics.bollingerMiddle || 0, lower: data.statistics.bollingerLower || 0 };
+      // Get historical price data for real technical calculations
+      const chartData = await this.getYahooChartDataForTechnicals(symbol);
+      if (!chartData) {
+        console.warn('No chart data available for technical calculations');
+        return null;
+      }
+      
+      // Calculate real technical indicators from price data
+      const rsi = this.calculateRSI(chartData.closes, 14);
+      const macd = this.calculateMACD(chartData.closes, 12, 26, 9);
+      const sma = { 
+        sma20: this.calculateSMA(chartData.closes, 20), 
+        sma50: this.calculateSMA(chartData.closes, 50), 
+        sma200: this.calculateSMA(chartData.closes, 200) 
+      };
+      const bollinger = this.calculateBollingerBands(chartData.closes, 20, 2);
+      
+      console.log(`📊 Real technical indicators calculated: RSI=${rsi.toFixed(2)}, MACD=${macd.value.toFixed(3)}, BB_upper=${bollinger.upper.toFixed(2)}`);
 
       return {
         symbol,
@@ -770,15 +958,35 @@ export class CentralizedDataProvider {
     this.apiHealth.set(apiName, health);
   }
 
+  /**
+   * Get current API health status for debugging
+   */
+  static getApiHealth(): Record<string, any> {
+    const healthMap: Record<string, any> = {};
+    this.apiHealth.forEach((health, apiName) => {
+      healthMap[apiName] = {
+        ...health,
+        lastSuccessAgo: health.lastSuccess ? Date.now() - health.lastSuccess : null,
+        lastFailureAgo: health.lastFailure ? Date.now() - health.lastFailure : null
+      };
+    });
+    return healthMap;
+  }
+
   private static createNoDataResponse(symbol: string, type: string): MarketData {
+    console.warn(`🚨 Creating no-data response for ${symbol} (${type}) - all data sources failed`);
+    
     return {
       symbol,
       price: 0,
       change: 0,
       changePercent: 0,
       volume: 0,
+      marketCap: undefined,
+      peRatio: undefined,
+      dividendYield: undefined,
       timestamp: new Date().toISOString(),
-      source: 'no_data',
+      source: 'no_data_fallback',
       quality: 'none'
     };
   }
@@ -841,26 +1049,395 @@ export class CentralizedDataProvider {
 
   // ===== PUBLIC UTILITY METHODS =====
 
-  static getApiHealth(): Record<string, any> {
-    const health: Record<string, any> = {};
-    this.apiHealth.forEach((value, key) => {
-      health[key] = {
-        ...value,
-        lastSuccess: new Date(value.lastSuccess).toISOString(),
-        lastFailure: new Date(value.lastFailure).toISOString()
-      };
-    });
-    return health;
-  }
-
   static clearCache(): void {
     this.cache.clear();
+  }
+
+  /**
+   * Get current rate limiting status for monitoring
+   */
+  static getRateLimitStatus(): { 
+    queueLength: number; 
+    recentRequests: number; 
+    isProcessing: boolean;
+    timeToNextSlot: number;
+  } {
+    const now = Date.now();
+    const recentRequests = this.requestTimes.filter(time => now - time < this.RATE_WINDOW).length;
+    
+    let timeToNextSlot = 0;
+    if (recentRequests >= this.RATE_LIMIT && this.requestTimes.length > 0) {
+      const oldestRequest = this.requestTimes[0];
+      timeToNextSlot = this.RATE_WINDOW - (now - oldestRequest);
+    }
+
+    return {
+      queueLength: this.requestQueue.length,
+      recentRequests,
+      isProcessing: this.isProcessingQueue,
+      timeToNextSlot: Math.max(0, timeToNextSlot)
+    };
   }
 
   static getCacheStats(): { size: number; entries: string[] } {
     return {
       size: this.cache.size,
       entries: Array.from(this.cache.keys())
+    };
+  }
+
+  // ===== TWELVEDATA TECHNICAL INDICATORS API =====
+
+  /**
+   * Get professional technical indicators from TwelveData API
+   */
+  private static async getTwelveDataTechnicalIndicators(symbol: string): Promise<TechnicalData | null> {
+    if (!this.TWELVEDATA_KEY) {
+      console.warn('TwelveData API key not available, falling back to manual calculations');
+      return null;
+    }
+
+    try {
+      console.log(`📊 Fetching professional technical indicators from TwelveData for ${symbol}...`);
+
+      // Fetch all technical indicators in parallel (with rate limiting)
+      console.log(`📊 Fetching TwelveData indicators for ${symbol}...`);
+      const [rsiData, macdData, bbandsData, sma20Data, sma50Data, ema12Data, ema26Data] = await Promise.all([
+        this.fetchTwelveDataRSI(symbol),
+        this.fetchTwelveDataMACD(symbol),
+        this.fetchTwelveDataBBands(symbol),
+        this.fetchTwelveDataSMA(symbol, 20),
+        this.fetchTwelveDataSMA(symbol, 50),
+        this.fetchTwelveDataEMA(symbol, 12),
+        this.fetchTwelveDataEMA(symbol, 26)
+      ]);
+
+      console.log(`🔍 TwelveData API Results:`, {
+        rsi: rsiData?.status,
+        macd: macdData?.status,
+        bbands: bbandsData?.status,
+        sma20: sma20Data?.status,
+        sma50: sma50Data?.status,
+        ema12: ema12Data?.status,
+        ema26: ema26Data?.status
+      });
+
+      // Extract the latest values with better validation
+      const rsi = parseFloat(rsiData?.values?.[0]?.rsi) || 50;
+      const macd = {
+        value: parseFloat(macdData?.values?.[0]?.macd) || 0,
+        signal: parseFloat(macdData?.values?.[0]?.macd_signal) || 0,
+        histogram: parseFloat(macdData?.values?.[0]?.macd_hist) || 0
+      };
+      const sma = {
+        sma20: parseFloat(sma20Data?.values?.[0]?.sma) || 0,
+        sma50: parseFloat(sma50Data?.values?.[0]?.sma) || 0,
+        sma200: 0 // Will add if needed
+      };
+      const bollinger = {
+        upper: parseFloat(bbandsData?.values?.[0]?.upper_band) || 0,
+        middle: parseFloat(bbandsData?.values?.[0]?.middle_band) || 0,
+        lower: parseFloat(bbandsData?.values?.[0]?.lower_band) || 0
+      };
+
+      // Check if we got valid data from TwelveData
+      const hasValidData = rsi > 0 && (macd.value !== 0 || macd.signal !== 0) && sma.sma20 > 0;
+      
+      if (!hasValidData) {
+        console.warn(`⚠️ TwelveData returned invalid data for ${symbol}, using manual calculations`);
+        return null;
+      }
+
+      console.log(`✅ TwelveData technical indicators: RSI=${rsi}, MACD=${macd.value ? macd.value.toFixed(3) : 'N/A'}, BB_upper=${bollinger.upper ? bollinger.upper.toFixed(2) : 'N/A'}`);
+
+      return {
+        symbol,
+        rsi: parseFloat(rsi.toString()),
+        macd,
+        sma,
+        bollinger,
+        timestamp: new Date().toISOString(),
+        source: 'twelvedata_professional',
+        quality: 'realtime'
+      };
+
+    } catch (error) {
+      console.error('Error fetching TwelveData technical indicators:', error);
+      return null;
+    }
+  }
+
+  private static async fetchTwelveDataRSI(symbol: string): Promise<any> {
+    try {
+      const result = await this.twelveDataRateLimitedRequest(async () => {
+        const response = await fetch(`https://api.twelvedata.com/rsi?symbol=${symbol}&interval=1day&time_period=14&apikey=${this.TWELVEDATA_KEY}`);
+        if (!response.ok) {
+          console.error(`TwelveData RSI API error: ${response.status} ${response.statusText}`);
+          return null;
+        }
+        const data = await response.json();
+        if (data.status === 'error') {
+          console.error(`TwelveData RSI error: ${data.message}`);
+          return null;
+        }
+        return data;
+      });
+      return result;
+    } catch (error) {
+      console.error('TwelveData RSI fetch error:', error);
+      return null;
+    }
+  }
+
+  private static async fetchTwelveDataMACD(symbol: string): Promise<any> {
+    return this.twelveDataRateLimitedRequest(() =>
+      fetch(`https://api.twelvedata.com/macd?symbol=${symbol}&interval=1day&fast_period=12&slow_period=26&signal_period=9&apikey=${this.TWELVEDATA_KEY}`)
+        .then(res => res.json())
+    );
+  }
+
+  private static async fetchTwelveDataBBands(symbol: string): Promise<any> {
+    return this.twelveDataRateLimitedRequest(() =>
+      fetch(`https://api.twelvedata.com/bbands?symbol=${symbol}&interval=1day&time_period=20&sd=2&apikey=${this.TWELVEDATA_KEY}`)
+        .then(res => res.json())
+    );
+  }
+
+  private static async fetchTwelveDataSMA(symbol: string, period: number): Promise<any> {
+    return this.twelveDataRateLimitedRequest(() =>
+      fetch(`https://api.twelvedata.com/sma?symbol=${symbol}&interval=1day&time_period=${period}&apikey=${this.TWELVEDATA_KEY}`)
+        .then(res => res.json())
+    );
+  }
+
+  private static async fetchTwelveDataEMA(symbol: string, period: number): Promise<any> {
+    return this.twelveDataRateLimitedRequest(() =>
+      fetch(`https://api.twelvedata.com/ema?symbol=${symbol}&interval=1day&time_period=${period}&apikey=${this.TWELVEDATA_KEY}`)
+        .then(res => res.json())
+    );
+  }
+
+  // ===== FALLBACK: MANUAL TECHNICAL INDICATOR CALCULATIONS =====
+
+  /**
+   * Calculate technical indicators manually using historical price data
+   */
+  private static async getManualTechnicalCalculations(symbol: string): Promise<TechnicalData | undefined> {
+    try {
+      console.log(`🔧 Using manual technical calculations for ${symbol}...`);
+      
+      // Get historical price data for calculations
+      const chartData = await this.getYahooChartDataForTechnicals(symbol);
+      if (!chartData || chartData.closes.length < 50) {
+        console.warn('Insufficient historical data for manual technical calculations');
+        return undefined;
+      }
+      
+      // Calculate real technical indicators from price data
+      const rsi = this.calculateRSI(chartData.closes, 14);
+      const macd = this.calculateMACD(chartData.closes, 12, 26, 9);
+      const sma = { 
+        sma20: this.calculateSMA(chartData.closes, 20), 
+        sma50: this.calculateSMA(chartData.closes, 50), 
+        sma200: this.calculateSMA(chartData.closes, 200) 
+      };
+      const bollinger = this.calculateBollingerBands(chartData.closes, 20, 2);
+      
+      console.log(`🔧 Manual technical calculations completed: RSI=${rsi.toFixed(2)}, MACD=${macd.value.toFixed(3)}, BB_upper=${bollinger.upper.toFixed(2)}`);
+
+      return {
+        symbol,
+        rsi,
+        macd,
+        sma,
+        bollinger,
+        timestamp: new Date().toISOString(),
+        source: 'manual_calculations',
+        quality: 'historical'
+      };
+    } catch (error) {
+      console.error('Error in manual technical calculations:', error);
+      return undefined;
+    }
+  }
+
+  /**
+   * Get extended historical chart data for technical calculations
+   */
+  private static async getYahooChartDataForTechnicals(symbol: string): Promise<{closes: number[], highs: number[], lows: number[]} | null> {
+    if (!this.RAPIDAPI_KEY) return null;
+
+    try {
+      // Get 200 days of data for technical calculations (max for SMA200)
+      const response = await this.rateLimitedRequest(() => 
+        fetch(`https://yahoo-finance-real-time1.p.rapidapi.com/stock/get-chart?symbol=${symbol}&region=US&lang=en-US&range=1y&interval=1d`, {
+          headers: {
+            'X-RapidAPI-Key': this.RAPIDAPI_KEY!,
+            'X-RapidAPI-Host': 'yahoo-finance-real-time1.p.rapidapi.com'
+          }
+        })
+      );
+      
+      if (!response.ok) return null;
+      
+      // Check if response is HTML (error page)
+      const responseText = await response.text();
+      if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+        console.warn(`Yahoo Finance historical data returned HTML error for ${symbol}`);
+        return null;
+      }
+      
+      const data = JSON.parse(responseText);
+      
+      if (!data?.chart?.result?.[0]?.indicators?.quote?.[0]) return null;
+
+      const quote = data.chart.result[0].indicators.quote[0];
+      
+      return {
+        closes: quote.close.filter((val: number) => val !== null && !isNaN(val)) || [],
+        highs: quote.high.filter((val: number) => val !== null && !isNaN(val)) || [],
+        lows: quote.low.filter((val: number) => val !== null && !isNaN(val)) || []
+      };
+    } catch (error) {
+      console.error('Error fetching chart data for technicals:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Calculate Real RSI using Wilder's smoothing method
+   */
+  private static calculateRSI(prices: number[], period: number = 14): number {
+    if (prices.length < period + 1) {
+      console.warn(`Insufficient data for RSI calculation. Need ${period + 1}, got ${prices.length}`);
+      return 50; // Neutral RSI fallback
+    }
+
+    // Calculate price changes
+    const changes: number[] = [];
+    for (let i = 1; i < prices.length; i++) {
+      changes.push(prices[i] - prices[i - 1]);
+    }
+
+    // Separate gains and losses
+    const gains = changes.map(change => change > 0 ? change : 0);
+    const losses = changes.map(change => change < 0 ? Math.abs(change) : 0);
+
+    // Initial average gain/loss (simple average for first period)
+    let avgGain = gains.slice(0, period).reduce((sum, gain) => sum + gain, 0) / period;
+    let avgLoss = losses.slice(0, period).reduce((sum, loss) => sum + loss, 0) / period;
+
+    // Apply Wilder's smoothing for subsequent periods
+    for (let i = period; i < changes.length; i++) {
+      avgGain = ((avgGain * (period - 1)) + gains[i]) / period;
+      avgLoss = ((avgLoss * (period - 1)) + losses[i]) / period;
+    }
+
+    // Calculate RSI
+    if (avgLoss === 0) return 100; // No losses = overbought
+    const rs = avgGain / avgLoss;
+    const rsi = 100 - (100 / (1 + rs));
+
+    return Math.round(rsi * 100) / 100; // Round to 2 decimal places
+  }
+
+  /**
+   * Calculate Real MACD using exponential moving averages
+   */
+  private static calculateMACD(prices: number[], fastPeriod: number = 12, slowPeriod: number = 26, signalPeriod: number = 9): { value: number; signal: number; histogram: number } {
+    if (prices.length < slowPeriod) {
+      console.warn(`Insufficient data for MACD calculation. Need ${slowPeriod}, got ${prices.length}`);
+      return { value: 0, signal: 0, histogram: 0 };
+    }
+
+    // Calculate EMAs
+    const fastEMA = this.calculateEMA(prices, fastPeriod);
+    const slowEMA = this.calculateEMA(prices, slowPeriod);
+
+    // Calculate MACD line (difference between EMAs)
+    const macdLine: number[] = [];
+    const minLength = Math.min(fastEMA.length, slowEMA.length);
+    for (let i = 0; i < minLength; i++) {
+      macdLine.push(fastEMA[i] - slowEMA[i]);
+    }
+
+    // Calculate signal line (EMA of MACD line)
+    const signalLine = this.calculateEMA(macdLine, signalPeriod);
+
+    // Get the latest values
+    const latestMACD = macdLine[macdLine.length - 1] || 0;
+    const latestSignal = signalLine[signalLine.length - 1] || 0;
+    const histogram = latestMACD - latestSignal;
+
+    return {
+      value: Math.round(latestMACD * 1000) / 1000,
+      signal: Math.round(latestSignal * 1000) / 1000,
+      histogram: Math.round(histogram * 1000) / 1000
+    };
+  }
+
+  /**
+   * Calculate Exponential Moving Average
+   */
+  private static calculateEMA(prices: number[], period: number): number[] {
+    if (prices.length < period) return [];
+
+    const ema: number[] = [];
+    const multiplier = 2 / (period + 1);
+
+    // First EMA value is the SMA
+    const firstSMA = prices.slice(0, period).reduce((sum, price) => sum + price, 0) / period;
+    ema.push(firstSMA);
+
+    // Calculate subsequent EMA values
+    for (let i = period; i < prices.length; i++) {
+      const currentEMA = (prices[i] * multiplier) + (ema[ema.length - 1] * (1 - multiplier));
+      ema.push(currentEMA);
+    }
+
+    return ema;
+  }
+
+  /**
+   * Calculate Simple Moving Average
+   */
+  private static calculateSMA(prices: number[], period: number): number {
+    if (prices.length < period) {
+      console.warn(`Insufficient data for SMA${period} calculation. Need ${period}, got ${prices.length}`);
+      return prices.length > 0 ? prices[prices.length - 1] : 0; // Return latest price as fallback
+    }
+
+    const relevantPrices = prices.slice(-period);
+    const sum = relevantPrices.reduce((acc, price) => acc + price, 0);
+    return Math.round((sum / period) * 100) / 100;
+  }
+
+  /**
+   * Calculate Real Bollinger Bands
+   */
+  private static calculateBollingerBands(prices: number[], period: number = 20, standardDeviations: number = 2): { upper: number; middle: number; lower: number } {
+    if (prices.length < period) {
+      console.warn(`Insufficient data for Bollinger Bands calculation. Need ${period}, got ${prices.length}`);
+      const latestPrice = prices.length > 0 ? prices[prices.length - 1] : 0;
+      return { upper: latestPrice, middle: latestPrice, lower: latestPrice };
+    }
+
+    // Calculate the middle line (SMA)
+    const middle = this.calculateSMA(prices, period);
+
+    // Calculate standard deviation
+    const relevantPrices = prices.slice(-period);
+    const variance = relevantPrices.reduce((acc, price) => acc + Math.pow(price - middle, 2), 0) / period;
+    const stdDev = Math.sqrt(variance);
+
+    // Calculate upper and lower bands
+    const upper = middle + (stdDev * standardDeviations);
+    const lower = middle - (stdDev * standardDeviations);
+
+    return {
+      upper: Math.round(upper * 100) / 100,
+      middle: Math.round(middle * 100) / 100,
+      lower: Math.round(lower * 100) / 100
     };
   }
 } 

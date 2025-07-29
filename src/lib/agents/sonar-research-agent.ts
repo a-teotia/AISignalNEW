@@ -19,43 +19,76 @@ export class SonarResearchAgent extends BaseAgent {
     // Get comprehensive data from centralized provider
     const centralizedData = await this.getCentralizedData(input.symbol);
     
-    // Use comprehensive scraped data for more accurate analysis
-    const scrapedData = await CentralizedDataProvider.getComprehensiveData(input.symbol);
-    const researchData = this.transformScrapedDataToResearchData(scrapedData);
+    // Transform centralized data into research format - no duplicate API calls
+    const researchData = this.transformCentralizedDataToResearchData(centralizedData);
     
-    // Enhance research data with centralized data sources
-    researchData.sources.push(...centralizedData.sources);
+    // 🏆 GOLD STANDARD: Enhanced financial domain expertise
+    const marketContext = this.getMarketContext(input.symbol, centralizedData);
     
     const prompt = `
-      Analyze ${input.symbol} for trading using this research data: ${JSON.stringify(researchData)}
-
+      As a professional equity research analyst and portfolio manager, conduct comprehensive fundamental and sentiment analysis for ${input.symbol}.
+      
+      MARKET CONTEXT: ${marketContext}
+      RESEARCH DATA: ${JSON.stringify(researchData)}
+      
+      CRITICAL ANALYSIS REQUIREMENTS:
+      • Sector rotation impact and relative strength vs sector peers
+      • Earnings calendar proximity and guidance revisions  
+      • Economic sensitivity (interest rates, inflation, GDP)
+      • Institutional flow patterns and insider activity
+      • Risk-adjusted momentum and mean reversion signals
+      • Catalyst identification and probability weighting
+      
       You MUST return ONLY valid JSON with this EXACT structure - no other text, no markdown, just pure JSON:
 
       {
-        "background": "Brief company/project background and current market position",
-        "filings": ["Recent filing 1", "Recent filing 2"],
-        "news": ["Major news 1", "Major news 2"],
-        "executives": ["Executive change 1", "Executive change 2"],
-        "products": ["Product update 1", "Product update 2"],
+        "background": "Company background with competitive positioning and market share analysis",
+        "filings": ["Recent SEC filings with key financial metrics changes"],
+        "news": ["Material news events with quantified market impact"],
+        "executives": ["Leadership changes affecting strategic direction"],
+        "products": ["Product pipeline updates with revenue implications"],
         "sentiment": {
           "overall": "bullish|bearish|neutral",
           "newsSentiment": 0.65,
           "socialSentiment": 0.72,
-          "analystRating": "buy|hold|sell"
+          "analystRating": "buy|hold|sell",
+          "institutionalFlow": "net_buying|net_selling|neutral",
+          "earningsRevisions": "upgrades|downgrades|stable"
+        },
+        "marketStructure": {
+          "sectorRotation": "inflow|outflow|neutral",
+          "relativeStrength": 0.75,
+          "correlationBreakdown": "decoupling|coupling|normal",
+          "liquidityConditions": "good|poor|normal",
+          "volatilityRegime": "low_vol|high_vol|normal"
+        },
+        "catalysts": [
+          {
+            "event": "Q4 Earnings Report",
+            "date": "2024-02-15",
+            "probability": 0.95,
+            "impact": "high",
+            "direction": "positive|negative|neutral"
+          }
+        ],
+        "riskFactors": {
+          "systematic": ["Interest rate sensitivity", "Economic cycle exposure"],
+          "idiosyncratic": ["Regulatory risks", "Competitive threats"],
+          "tail_risks": ["Black swan events", "Liquidity crises"],
+          "risk_adjusted_return": 0.85
         },
         "geopolitical": {
-          "economicFactors": ["Factor 1", "Factor 2"],
-          "politicalRisks": ["Risk 1", "Risk 2"],
-          "socialTrends": ["Trend 1", "Trend 2"],
+          "economicFactors": ["GDP growth impact", "Inflation sensitivity"],
+          "politicalRisks": ["Regulatory changes", "Policy shifts"],
+          "socialTrends": ["ESG factors", "Consumer behavior"],
           "globalImpact": "positive|negative|neutral",
           "riskLevel": "low|medium|high"
         },
         "keyEvents": [
-          {"date": "2024-01-15", "event": "Earnings beat expectations", "impact": "positive"},
-          {"date": "2024-01-10", "event": "New product launch", "impact": "positive"}
+          {"date": "2024-01-15", "event": "Earnings beat", "impact": "positive", "price_impact": 0.05}
         ],
         "confidence": 75,
-        "sources": ["source1", "source2"]
+        "sources": ["professional financial data sources"]
       }
 
       IMPORTANT: Return ONLY the JSON object, no explanations, no markdown formatting, no code blocks. The response must be parseable by JSON.parse().
@@ -131,142 +164,55 @@ export class SonarResearchAgent extends BaseAgent {
     };
   }
 
-  private async getResearchData(symbol: string) {
-    try {
-      const researchData: any = {
-        news: [],
-        sentiment: { overall: 'neutral', newsSentiment: 0.5, socialSentiment: 0.5, analystRating: 'hold' },
-        keyEvents: [],
-        sources: []
-      };
 
-      // For crypto, get crypto-specific news and sentiment
-      if (symbol.includes('BTC') || symbol.includes('ETH')) {
-        const [newsRes, sentimentRes] = await Promise.all([
-          fetch(`https://api.coingecko.com/api/v3/coins/${symbol.includes('BTC') ? 'bitcoin' : 'ethereum'}/status_updates`),
-          fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${symbol.includes('BTC') ? 'bitcoin' : 'ethereum'}&vs_currencies=usd&include_24hr_change=true`)
-        ]);
-        
-        const newsData = await newsRes.json();
-        const priceData = await sentimentRes.json();
-        
-        if (newsData.status_updates) {
-          researchData.news = newsData.status_updates.slice(0, 5).map((update: any) => update.description);
-        }
-        
-        // Calculate sentiment based on price action
-        const priceChange = priceData[symbol.includes('BTC') ? 'bitcoin' : 'ethereum']?.usd_24h_change || 0;
-        researchData.sentiment.newsSentiment = priceChange > 0 ? 0.7 : priceChange < 0 ? 0.3 : 0.5;
-        researchData.sentiment.overall = priceChange > 2 ? 'bullish' : priceChange < -2 ? 'bearish' : 'neutral';
-        
-        researchData.sources.push('https://coingecko.com');
-      }
-      
-      // For ASX stocks, get stock-specific news and data
-      if (symbol.includes('.AX')) {
-        try {
-          // Use Yahoo Finance for news
-          const newsRes = await fetch(`https://feeds.finance.yahoo.com/rss/2.0/headline?s=${symbol.replace('.AX', '.AX')}&region=AU&lang=en-AU`);
-          const newsText = await newsRes.text();
-          
-          // Parse RSS feed for news headlines using regex (Node.js compatible)
-          const itemMatches = newsText.match(/<item>([\s\S]*?)<\/item>/g) || [];
-          const items = itemMatches.slice(0, 5).map(item => {
-            const titleMatch = item.match(/<title>([\s\S]*?)<\/title>/);
-            return titleMatch ? titleMatch[1] : '';
-          }).filter(Boolean);
-          
-          researchData.news = items;
-          
-          // Get price data for sentiment
-          const baseUrl = getBaseUrl();
-        const priceRes = await fetch(`${baseUrl}/api/yahoo-finance?symbol=${encodeURIComponent(symbol)}&interval=1d&range=5d`);
-          const priceData = await priceRes.json();
-          
-          if (priceData && priceData.chart && priceData.chart.result && priceData.chart.result[0]) {
-            const result = priceData.chart.result[0];
-            const quotes = result.indicators.quote[0];
-            const closes = quotes.close;
-            
-            if (closes && closes.length > 1) {
-              const latestPrice = closes[closes.length - 1];
-              const prevPrice = closes[closes.length - 2];
-              const priceChange = ((latestPrice - prevPrice) / prevPrice) * 100;
-              
-              researchData.sentiment.newsSentiment = priceChange > 0 ? 0.7 : priceChange < 0 ? 0.3 : 0.5;
-              researchData.sentiment.overall = priceChange > 1 ? 'bullish' : priceChange < -1 ? 'bearish' : 'neutral';
-            }
-          }
-          
-          researchData.sources.push('https://finance.yahoo.com', 'https://asx.com.au');
-        } catch (error) {
-          console.error('Error fetching ASX news:', error);
-        }
-      }
-      
-      // Add key events based on recent activity
-      const today = new Date();
-      researchData.keyEvents = [
-        {
-          date: today.toISOString().split('T')[0],
-          event: `Analysis of ${symbol} market position`,
-          impact: researchData.sentiment.overall === 'bullish' ? 'positive' : researchData.sentiment.overall === 'bearish' ? 'negative' : 'neutral'
-        }
-      ];
-      
-      return researchData;
-    } catch (error) {
-      console.error('Error fetching research data:', error);
-      return {
-        news: [],
-        sentiment: { overall: 'neutral', newsSentiment: 0.5, socialSentiment: 0.5, analystRating: 'hold' },
-        keyEvents: [],
-        sources: []
-      };
-    }
-  }
-
-  private transformScrapedDataToResearchData(scrapedData: any) {
+  private transformCentralizedDataToResearchData(centralizedData: any) {
     // Transform comprehensive data from CentralizedDataProvider into research format
-    const sentiment = this.analyzeSentiment(scrapedData);
+    const sentiment = this.analyzeSentiment(centralizedData);
+    const marketData = centralizedData.marketData;
+    const newsData = centralizedData.newsData;
+    
+    // Use real market data from Yahoo Finance API
+    const priceChange = marketData?.changePercent || 0;
+    const volume = marketData?.volume || 0;
     
     return {
-      background: `${scrapedData.marketData?.symbol || 'Unknown'} analysis based on comprehensive market data`,
+      background: `${marketData?.symbol || 'Unknown'} - Current Price: $${marketData?.price?.toFixed(2) || 'N/A'}, ${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(2)}% (Volume: ${volume.toLocaleString()})`,
       filings: [],
-      news: scrapedData.newsData?.articles?.map((n: any) => n.title) || [],
+      news: newsData?.articles?.map((n: any) => n.title) || [],
       executives: [],
       products: [],
       sentiment: {
         overall: sentiment,
-        newsSentiment: this.calculateNewsSentiment(scrapedData.newsData?.articles || []),
-        socialSentiment: this.calculateSocialSentiment([]), // No social media data in new structure
-        analystRating: "hold"
+        newsSentiment: newsData?.sentimentScore || this.calculateNewsSentiment(newsData?.articles || []),
+        socialSentiment: 0.5, // No social media data in current structure
+        analystRating: this.deriveAnalystRating(priceChange, newsData?.overallSentiment)
       },
       geopolitical: {
-        economicFactors: ['Stable economic conditions'],
-        politicalRisks: ['Low political risk'],
-        socialTrends: ['Neutral social sentiment'],
-        globalImpact: 'neutral',
-        riskLevel: 'low'
+        economicFactors: this.extractEconomicFactors(centralizedData),
+        politicalRisks: ['Market volatility risk', 'Regulatory changes'],
+        socialTrends: ['Digital transformation', 'ESG investing trends'],
+        globalImpact: priceChange > 5 ? 'positive' : priceChange < -5 ? 'negative' : 'neutral',
+        riskLevel: Math.abs(priceChange) > 10 ? 'high' : Math.abs(priceChange) > 5 ? 'medium' : 'low'
       },
-      keyEvents: [],
-      confidence: 75,
-      sources: ['Yahoo Finance', 'Market Analysis']
+      keyEvents: this.extractKeyEvents(centralizedData),
+      confidence: centralizedData.overallQuality === 'realtime' ? 85 : centralizedData.overallQuality === 'cached' ? 75 : 60,
+      sources: centralizedData.sources || ['Yahoo Finance']
     };
   }
 
   private analyzeSentiment(data: any): string {
-    // Handle case where data structure is different
-    if (!data || !data.newsData) {
-      return 'neutral';
+    // Use centralized data sentiment analysis
+    if (!data) return 'neutral';
+    
+    // First check if newsData has overall sentiment from Yahoo Finance
+    if (data.newsData?.overallSentiment) {
+      return data.newsData.overallSentiment;
     }
     
-    const newsSentiment = this.calculateNewsSentiment(data.newsData.articles || []);
-    const socialSentiment = 0.5; // Default neutral for social media
-    const avgSentiment = (newsSentiment + socialSentiment) / 2;
-    
-    if (avgSentiment > 0.6) return 'bullish';
-    if (avgSentiment < 0.4) return 'bearish';
+    // Fallback to price movement analysis
+    const priceChange = data.marketData?.changePercent || 0;
+    if (priceChange > 2) return 'bullish';
+    if (priceChange < -2) return 'bearish';
     return 'neutral';
   }
 
@@ -280,6 +226,55 @@ export class SonarResearchAgent extends BaseAgent {
     return sentimentScores.reduce((a, b) => a + b, 0) / sentimentScores.length;
   }
 
+  private deriveAnalystRating(priceChange: number, sentiment?: string): string {
+    if (sentiment === 'bullish' || priceChange > 5) return 'buy';
+    if (sentiment === 'bearish' || priceChange < -5) return 'sell';
+    return 'hold';
+  }
+
+  private extractEconomicFactors(data: any): string[] {
+    const factors = ['Market conditions'];
+    const marketData = data.marketData;
+    
+    if (marketData?.volume && marketData.volume > 1000000) {
+      factors.push('High trading volume indicates strong interest');
+    }
+    
+    if (Math.abs(marketData?.changePercent || 0) > 5) {
+      factors.push('Significant price movement detected');
+    }
+    
+    return factors;
+  }
+
+  private extractKeyEvents(data: any): Array<{date: string; event: string; impact: string}> {
+    const events = [];
+    const today = new Date().toISOString().split('T')[0];
+    const marketData = data.marketData;
+    
+    if (marketData?.changePercent) {
+      const impact = marketData.changePercent > 0 ? 'positive' : 'negative';
+      events.push({
+        date: today,
+        event: `Price moved ${marketData.changePercent > 0 ? '+' : ''}${marketData.changePercent.toFixed(2)}%`,
+        impact
+      });
+    }
+    
+    // Add news events
+    if (data.newsData?.articles) {
+      data.newsData.articles.slice(0, 2).forEach((article: any) => {
+        events.push({
+          date: article.timestamp ? article.timestamp.split('T')[0] : today,
+          event: article.title,
+          impact: article.sentiment === 'bullish' ? 'positive' : article.sentiment === 'bearish' ? 'negative' : 'neutral'
+        });
+      });
+    }
+    
+    return events;
+  }
+
   private calculateSocialSentiment(socialMedia: any[]): number {
     if (!socialMedia || !socialMedia.length) return 0.5;
     const sentimentScores = socialMedia.map(s => {
@@ -288,6 +283,65 @@ export class SonarResearchAgent extends BaseAgent {
       return 0.5;
     });
     return sentimentScores.reduce((a, b) => a + b, 0) / sentimentScores.length;
+  }
+
+  // 🏆 GOLD STANDARD: Generate professional market context
+  private getMarketContext(symbol: string, centralizedData: any): string {
+    try {
+      const marketData = centralizedData?.marketData;
+      const technicalData = centralizedData?.technicalData;
+      
+      if (!marketData) {
+        return "LIMITED DATA - Basic analysis only";
+      }
+      
+      const price = marketData.price || 0;
+      const change = marketData.changePercent || 0;
+      const volume = marketData.volume || 0;
+      
+      // Market regime analysis
+      let marketRegime = "NEUTRAL";
+      if (change > 5) marketRegime = "STRONG BULL";
+      else if (change > 2) marketRegime = "BULL";
+      else if (change < -5) marketRegime = "STRONG BEAR";  
+      else if (change < -2) marketRegime = "BEAR";
+      
+      // Volume analysis
+      let volumeContext = "NORMAL";
+      if (volume > 2000000) volumeContext = "HIGH";
+      else if (volume < 100000) volumeContext = "LOW";
+      
+      // Technical context
+      let technicalContext = "NO TECHNICAL DATA";
+      if (technicalData) {
+        const rsi = technicalData.rsi || 50;
+        const macd = technicalData.macd?.value || 0;
+        
+        if (rsi > 70) technicalContext = "OVERBOUGHT (RSI>70)";
+        else if (rsi < 30) technicalContext = "OVERSOLD (RSI<30)";
+        else if (macd > 0) technicalContext = "BULLISH MOMENTUM (MACD+)";
+        else if (macd < 0) technicalContext = "BEARISH MOMENTUM (MACD-)";
+        else technicalContext = "NEUTRAL MOMENTUM";
+      }
+      
+      // Sector analysis (basic inference from symbol)
+      let sectorContext = "GENERAL MARKET";
+      if (symbol.includes('AAPL') || symbol.includes('MSFT') || symbol.includes('GOOGL')) {
+        sectorContext = "MEGA-CAP TECH - Rate sensitive, earnings driven";
+      } else if (symbol.includes('JPM') || symbol.includes('BAC') || symbol.includes('WFC')) {
+        sectorContext = "FINANCIALS - Rate sensitive, economic cycle dependent";
+      } else if (symbol.includes('XOM') || symbol.includes('CVX')) {
+        sectorContext = "ENERGY - Commodity driven, geopolitical sensitive";
+      } else if (symbol.includes('BTC') || symbol.includes('ETH')) {
+        sectorContext = "CRYPTO - High volatility, sentiment driven, regulatory sensitive";
+      }
+      
+      return `MARKET REGIME: ${marketRegime} | VOLUME: ${volumeContext} | TECHNICAL: ${technicalContext} | SECTOR: ${sectorContext} | PRICE: $${price.toFixed(2)} (${change > 0 ? '+' : ''}${change.toFixed(2)}%)`;
+      
+    } catch (error) {
+      console.error('Error generating market context:', error);
+      return "MARKET CONTEXT UNAVAILABLE - Proceeding with basic analysis";
+    }
   }
 
   private getFallbackData(): SonarResearchData {

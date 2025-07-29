@@ -79,6 +79,9 @@ export interface MultiAgentOutput {
     takeProfit?: number;
     expirationTime?: string; // ISO timestamp
     riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+    // 🔧 RISK MANAGEMENT ADDITIONS:
+    riskRewardRatio?: number;
+    tradeable?: boolean;
   };
   confidence: number;
   metadata: {
@@ -112,6 +115,19 @@ export interface MultiAgentOutput {
         conflicts: string[];
         uncertainties: string[];
       };
+    };
+    crossValidation: {
+      conflicts: Array<{
+        type: string;
+        agents: string[];
+        description: string;
+        severity: 'low' | 'medium' | 'high';
+        impact: number;
+      }>;
+      consensus: Record<string, any>;
+      outliers: string[];
+      conflictScore: number;
+      consensusStrength: number;
     };
   };
 }

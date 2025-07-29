@@ -17,14 +17,28 @@ export class GeoSentienceAgent extends BaseAgent {
     // Get centralized data for context
     const centralizedData = await this.getCentralizedData(input.symbol);
     
+    // Extract key data for analysis
+    const marketData = centralizedData.marketData;
+    const newsData = centralizedData.newsData;
+    const priceChange = marketData?.changePercent || 0;
+    const volume = marketData?.volume || 0;
+    const newsCount = newsData?.articles?.length || 0;
+    const overallSentiment = newsData?.overallSentiment || 'neutral';
+    
     const prompt = `
-      Analyze ${input.symbol} for macro/geopolitical factors using Sonar Deep Research model with this market context: ${JSON.stringify(centralizedData)}
+      Analyze ${input.symbol} for macro/geopolitical factors using real market data:
+      - Current Price: $${marketData?.price?.toFixed(2) || 'N/A'}
+      - Price Change: ${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(2)}%
+      - Volume: ${volume.toLocaleString()}
+      - News Sentiment: ${overallSentiment}
+      - News Articles: ${newsCount} recent articles
+      - Data Quality: ${centralizedData.overallQuality}
 
       Provide a comprehensive but STABLE analysis focusing on:
-      1. Economic factors that affect this asset
-      2. Political risks and their impact
-      3. Social trends and sentiment
-      4. Overall risk assessment
+      1. Economic factors that affect this asset based on REAL price movement
+      2. Political risks and their impact using ACTUAL news sentiment
+      3. Social trends and sentiment from YAHOO FINANCE data
+      4. Overall risk assessment based on REAL market volatility
 
       You MUST return ONLY valid JSON with this EXACT structure - no other text, no markdown, just pure JSON:
 
@@ -105,23 +119,44 @@ export class GeoSentienceAgent extends BaseAgent {
       symbol: input.symbol,
       timestamp: new Date().toISOString(),
       data: data,
-      confidence: data.confidence || this.calculateConfidence({
-        dataQuality: 85,
-        signalStrength: 75,
-        sourceReliability: 80,
-        recency: 90
-      }),
-      sources: data.sources || [
-        'https://reuters.com',
-        'https://bloomberg.com',
-        'https://cnbc.com',
-        'https://worldbank.org'
-      ],
+      confidence: data.confidence || this.calculateGeoConfidence(centralizedData),
+      sources: [...(data.sources || []), ...centralizedData.sources],
       processingTime: result.processingTime,
       quality: this.createQualityMetrics(centralizedData),
       validation: this.createValidationMetrics(centralizedData),
       reliability: this.createReliabilityMetrics(centralizedData)
     };
+  }
+
+  private calculateGeoConfidence(centralizedData: any): number {
+    const factors = {
+      dataQuality: centralizedData.overallQuality === 'realtime' ? 95 : 
+                   centralizedData.overallQuality === 'cached' ? 85 : 70,
+      signalStrength: this.calculateGeoSignalStrength(centralizedData),
+      sourceReliability: centralizedData.sources?.length > 0 ? 90 : 70,
+      recency: centralizedData.overallQuality === 'realtime' ? 95 : 80
+    };
+
+    return this.calculateConfidence(factors);
+  }
+
+  private calculateGeoSignalStrength(centralizedData: any): number {
+    let strength = 50;
+    
+    // Price volatility impact
+    const priceChange = Math.abs(centralizedData.marketData?.changePercent || 0);
+    strength += priceChange > 10 ? 30 : priceChange > 5 ? 20 : priceChange > 2 ? 10 : 0;
+    
+    // News sentiment impact
+    if (centralizedData.newsData?.articles?.length > 0) {
+      strength += 15;
+    }
+    
+    // Volume impact
+    const volume = centralizedData.marketData?.volume || 0;
+    strength += volume > 1000000 ? 15 : volume > 100000 ? 10 : 5;
+    
+    return Math.min(100, strength);
   }
 
   private getFallbackData(): GeoSentienceData {

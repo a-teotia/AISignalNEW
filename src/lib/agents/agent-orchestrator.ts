@@ -7,6 +7,7 @@ import { OnChainAgent } from './onchain-agent';
 import { FlowAgent } from './flow-agent';
 import { MicrostructureAgent } from './microstructure-agent';
 import { MLAgent } from './ml-agent';
+import { MarketStructureAgent } from './market-structure-agent';
 import { AgentInput, AgentOutput, MultiAgentOutput } from '../types/prediction-types';
 import { SignalValidator } from './signal-validator';
 import { logAgentResult, logLargeObject } from '../utils';
@@ -23,6 +24,7 @@ export class AgentOrchestrator {
       new FlowAgent(),
       new MicrostructureAgent(),
       new MLAgent(),
+      new MarketStructureAgent(),
       new SynthOracleAgent()
     ];
   }
@@ -42,14 +44,15 @@ export class AgentOrchestrator {
         this.agents[3].process({ symbol }), // OnChain
         this.agents[4].process({ symbol }), // Flow
         this.agents[5].process({ symbol }), // Microstructure
-        this.agents[6].process({ symbol })  // ML
+        this.agents[6].process({ symbol }), // ML
+        this.agents[7].process({ symbol })  // MarketStructure
       ];
 
       const agentResults = await Promise.all(agentPromises);
       
       // 🏆 GOLD STANDARD: Validate each agent result
       const validatedResults: Record<string, AgentOutput> = {};
-      const agentNames = ['sonar', 'geo', 'quant', 'onchain', 'flow', 'microstructure', 'ml'];
+      const agentNames = ['sonar', 'geo', 'quant', 'onchain', 'flow', 'microstructure', 'ml', 'marketstructure'];
       
       for (let i = 0; i < agentResults.length; i++) {
         const result = SignalValidator.validateAgentOutput(agentResults[i]);
@@ -83,6 +86,12 @@ export class AgentOrchestrator {
         console.warn(`⚠️  Warning: ${lowQualityAgents.length} agents have low quality data (<${qualityThreshold})`);
         console.warn(`   Low quality agents: ${lowQualityAgents.map(([agent, result]) => 
           `${agent}(${result.quality.overallQuality})`).join(', ')}`);
+        
+        // Log data sources to help debug
+        console.warn(`🔍 Data source analysis for ${symbol}:`);
+        Object.entries(validatedResults).forEach(([agent, result]) => {
+          console.warn(`   ${agent}: sources=${result.sources.join(', ')}, quality=${result.quality.overallQuality}`);
+        });
       }
 
       // Log each agent's result for debugging (with better formatting)
@@ -93,6 +102,7 @@ export class AgentOrchestrator {
       logAgentResult('FlowAgent', validatedResults.flow);
       logAgentResult('MicrostructureAgent', validatedResults.microstructure);
       logAgentResult('MLAgent', validatedResults.ml);
+      logAgentResult('MarketStructureAgent', validatedResults.marketstructure);
 
       console.log('✅ All analysis agents completed and validated');
 
@@ -101,8 +111,8 @@ export class AgentOrchestrator {
       
       // Prepare context for synthesis agent, filtering out zero-confidence data
       const synthesisContext: any = {};
-      const contextKeys = ['sonarData', 'geoData', 'quantData', 'onchainData', 'flowData', 'microstructureData', 'mlData'];
-      const agentKeys = ['sonar', 'geo', 'quant', 'onchain', 'flow', 'microstructure', 'ml'];
+      const contextKeys = ['sonarData', 'geoData', 'quantData', 'onchainData', 'flowData', 'microstructureData', 'mlData', 'marketStructureData'];
+      const agentKeys = ['sonar', 'geo', 'quant', 'onchain', 'flow', 'microstructure', 'ml', 'marketstructure'];
       
       for (let i = 0; i < contextKeys.length; i++) {
         const contextKey = contextKeys[i];
@@ -118,7 +128,7 @@ export class AgentOrchestrator {
         }
       }
       
-      const synthResult = await this.agents[7].process({
+      const synthResult = await this.agents[8].process({
         symbol,
         context: synthesisContext
       });
@@ -134,7 +144,10 @@ export class AgentOrchestrator {
       const totalTime = Date.now() - startTime;
       console.log(`🎯 Multi-agent analysis completed in ${totalTime}ms`);
 
-      // 🏆 GOLD STANDARD: Calculate overall quality and reliability metrics
+      // 🏆 GOLD STANDARD: Cross-agent validation and conflict detection
+      const crossValidation = this.performCrossAgentValidation(validatedResults);
+      
+      // Calculate overall quality and reliability metrics
       const overallQuality = this.calculateOverallQuality(validatedResults);
       const validationSummary = this.calculateValidationSummary(validatedResults);
       const reliabilityMetrics = this.calculateReliabilityMetrics(validatedResults);
@@ -160,12 +173,34 @@ export class AgentOrchestrator {
           overallQuality,
           validationSummary,
           reliabilityMetrics,
-          transparency
+          transparency,
+          crossValidation
         }
       };
 
     } catch (error) {
-      console.error('❌ Multi-agent analysis failed:', error);
+      console.error(`❌ Multi-agent analysis failed for ${symbol}:`, error);
+      
+      // Enhanced error logging for debugging
+      if (error instanceof Error) {
+        console.error(`   Error message: ${error.message}`);
+        console.error(`   Error stack: ${error.stack?.substring(0, 500)}`);
+      }
+      
+      // Log API health status from centralized data provider
+      try {
+        const { CentralizedDataProvider } = await import('../centralized-data-provider');
+        const healthStatus = (CentralizedDataProvider as any).getApiHealth?.();
+        if (healthStatus) {
+          console.error('🏥 API Health Status:');
+          Object.entries(healthStatus).forEach(([api, health]) => {
+            console.error(`   ${api}: success rate ${((health as any).successRate * 100).toFixed(1)}%`);
+          });
+        }
+      } catch (healthError) {
+        console.error('Unable to retrieve API health status:', healthError);
+      }
+      
       throw error;
     }
   }
@@ -315,10 +350,20 @@ export class AgentOrchestrator {
       confidence: 50 
     };
 
+    // 🔧 PROFESSIONAL RISK MANAGEMENT: Check confidence threshold
+    const overallConfidence = this.calculateOverallConfidence(allResults);
+    const minConfidenceThreshold = 70; // Professional threshold
+    
+    // If confidence is too low, force NEUTRAL direction
+    if (overallConfidence < minConfidenceThreshold) {
+      console.log(`⚠️  Low confidence (${overallConfidence}%) - forcing NEUTRAL direction for risk management`);
+      basePrediction.direction = 'NEUTRAL';
+    }
+
     // Calculate risk level based on quality and confidence
     const riskLevel = this.calculateRiskLevel(synthResult, allResults);
 
-    // Generate entry/exit points (placeholder - would need price data)
+    // Generate entry/exit points
     const entryPrice = this.calculateEntryPrice(basePrediction, allResults);
     const stopLoss = this.calculateStopLoss(entryPrice, basePrediction, riskLevel);
     const takeProfit = this.calculateTakeProfit(entryPrice, basePrediction, riskLevel);
@@ -326,12 +371,17 @@ export class AgentOrchestrator {
     // Calculate expiration time based on prediction type
     const expirationTime = this.calculateExpirationTime(basePrediction);
 
+    // 🔧 RISK MANAGEMENT VALIDATION
+    const riskRewardRatio = Math.abs((takeProfit - entryPrice) / (stopLoss - entryPrice));
+    
     console.log(`🎯 Enhanced Prediction Details:`);
     console.log(`   Direction: ${basePrediction.direction}`);
+    console.log(`   Overall Confidence: ${overallConfidence}% (min: ${minConfidenceThreshold}%)`);
     console.log(`   Risk Level: ${riskLevel}`);
-    console.log(`   Entry Price: $${entryPrice}`);
-    console.log(`   Stop Loss: $${stopLoss}`);
-    console.log(`   Take Profit: $${takeProfit}`);
+    console.log(`   Entry Price: $${entryPrice.toFixed(2)}`);
+    console.log(`   Stop Loss: $${stopLoss.toFixed(2)}`);
+    console.log(`   Take Profit: $${takeProfit.toFixed(2)}`);
+    console.log(`   Risk/Reward Ratio: 1:${riskRewardRatio.toFixed(2)}`);
     console.log(`   Expiration: ${expirationTime}`);
 
     return {
@@ -340,7 +390,9 @@ export class AgentOrchestrator {
       stopLoss,
       takeProfit,
       expirationTime,
-      riskLevel
+      riskLevel,
+      riskRewardRatio,
+      tradeable: overallConfidence >= minConfidenceThreshold && basePrediction.direction !== 'NEUTRAL'
     };
   }
 
@@ -412,18 +464,32 @@ export class AgentOrchestrator {
     if (!entryPrice || entryPrice === 0) return 0;
     const stopLossPercentages = { LOW: 0.02, MEDIUM: 0.03, HIGH: 0.05 };
     const percentage = stopLossPercentages[riskLevel as keyof typeof stopLossPercentages] || 0.03;
-    return prediction.direction === 'UP' 
-      ? entryPrice * (1 - percentage)
-      : entryPrice * (1 + percentage);
+    
+    // 🔧 FIX: Handle SIDEWAYS/NEUTRAL direction
+    if (prediction.direction === 'UP') {
+      return entryPrice * (1 - percentage); // Stop loss BELOW entry for longs
+    } else if (prediction.direction === 'DOWN') {
+      return entryPrice * (1 + percentage); // Stop loss ABOVE entry for shorts
+    } else {
+      // SIDEWAYS/NEUTRAL: No position recommended, return tight stop loss
+      return entryPrice * (1 - 0.01); // Very tight 1% stop loss as warning
+    }
   }
 
   private calculateTakeProfit(entryPrice: number, prediction: any, riskLevel: string): number {
     if (!entryPrice || entryPrice === 0) return 0;
     const takeProfitPercentages = { LOW: 0.04, MEDIUM: 0.06, HIGH: 0.10 };
     const percentage = takeProfitPercentages[riskLevel as keyof typeof takeProfitPercentages] || 0.06;
-    return prediction.direction === 'UP' 
-      ? entryPrice * (1 + percentage)
-      : entryPrice * (1 - percentage);
+    
+    // 🔧 FIX: Handle SIDEWAYS/NEUTRAL direction
+    if (prediction.direction === 'UP') {
+      return entryPrice * (1 + percentage); // Take profit ABOVE entry for longs
+    } else if (prediction.direction === 'DOWN') {
+      return entryPrice * (1 - percentage); // Take profit BELOW entry for shorts
+    } else {
+      // SIDEWAYS/NEUTRAL: No position recommended, return minimal profit target
+      return entryPrice * (1 + 0.01); // Very tight 1% profit target as warning
+    }
   }
 
   private calculateExpirationTime(prediction: any): string {
@@ -441,43 +507,236 @@ export class AgentOrchestrator {
   }
 
   private calculateOverallConfidence(results: Record<string, AgentOutput>): number {
-    // Use SynthOracle's confidence as the primary confidence since it's the synthesis agent
-    const synthConfidence = results.synth?.confidence || 50;
+    // 🏆 GOLD STANDARD: Dynamic confidence-based weighting system
+    console.log('🎯 Calculating overall confidence with dynamic weighting...');
     
-    // If SynthOracle has a reasonable confidence, use it
-    if (synthConfidence > 0) {
+    // Use SynthOracle's confidence if it's high quality (>60%)
+    const synthConfidence = results.synth?.confidence || 50;
+    const synthQuality = results.synth?.quality?.overallQuality || 0;
+    
+    if (synthConfidence > 60 && synthQuality > 70) {
+      console.log(`✅ Using high-quality SynthOracle confidence: ${synthConfidence}% (quality: ${synthQuality}%)`);
       return synthConfidence;
     }
     
-    // Fallback to weighted average of other agents (excluding synth and zero-confidence agents)
-    const weights = { 
-      sonar: 0.20, 
-      geo: 0.20, 
-      quant: 0.20, 
-      onchain: 0.15, 
-      flow: 0.15, 
-      ml: 0.10
-      // Exclude microstructure if it has zero confidence
+    // 🆕 DYNAMIC WEIGHTING: Base weights adjusted by confidence and quality
+    const baseWeights = { 
+      sonar: 0.18,         // News & sentiment analysis
+      geo: 0.16,           // Macro factors & geopolitical
+      quant: 0.22,         // Technical analysis
+      onchain: 0.13,       // Blockchain metrics
+      flow: 0.13,          // Institutional flows
+      ml: 0.06,            // Machine learning predictions
+      marketstructure: 0.12 // 🆕 Market structure analysis
     };
     
-    let totalConfidence = 0;
-    let totalWeight = 0;
+    let totalWeightedConfidence = 0;
+    let totalDynamicWeight = 0;
+    const agentWeights: Record<string, number> = {};
 
     for (const [agent, result] of Object.entries(results)) {
-      // Skip synth (already handled) and agents with zero confidence
+      // Skip synth (handled above) and agents with zero confidence
       if (agent === 'synth' || (result.confidence || 0) === 0) {
         continue;
       }
       
-      const confidence = result.confidence || 50;
-      const weight = weights[agent as keyof typeof weights] || 0;
+      const confidence = result.confidence || 0;
+      const quality = result.quality?.overallQuality || 50;
+      const validationScore = result.validation?.score || 50;
+      const baseWeight = baseWeights[agent as keyof typeof baseWeights] || 0;
       
-      totalConfidence += confidence * weight;
-      totalWeight += weight;
+      // 🎯 DYNAMIC WEIGHT CALCULATION
+      // Higher confidence & quality = higher weight
+      const confidenceMultiplier = Math.max(0.1, confidence / 100); // 0.1 to 1.0
+      const qualityMultiplier = Math.max(0.5, quality / 100);       // 0.5 to 1.0  
+      const validationMultiplier = Math.max(0.5, validationScore / 100); // 0.5 to 1.0
+      
+      const dynamicWeight = baseWeight * confidenceMultiplier * qualityMultiplier * validationMultiplier;
+      
+      agentWeights[agent] = dynamicWeight;
+      totalWeightedConfidence += confidence * dynamicWeight;
+      totalDynamicWeight += dynamicWeight;
+      
+      console.log(`📊 ${agent}: confidence=${confidence}%, quality=${quality}%, validation=${validationScore}%, weight=${dynamicWeight.toFixed(3)}`);
     }
 
-    // If we have valid agents, return weighted average, otherwise return synth confidence
-    return totalWeight > 0 ? Math.round(totalConfidence / totalWeight) : synthConfidence;
+    // Calculate final confidence
+    const finalConfidence = totalDynamicWeight > 0 ? 
+      Math.round(totalWeightedConfidence / totalDynamicWeight) : synthConfidence;
+    
+    console.log(`🎯 Final weighted confidence: ${finalConfidence}% (total dynamic weight: ${totalDynamicWeight.toFixed(3)})`);
+    console.log(`📈 Agent weight distribution:`, Object.entries(agentWeights)
+      .map(([agent, weight]) => `${agent}: ${(weight/totalDynamicWeight*100).toFixed(1)}%`)
+      .join(', '));
+    
+    return finalConfidence;
+  }
+
+  // 🏆 GOLD STANDARD: Cross-agent validation and conflict detection
+  private performCrossAgentValidation(results: Record<string, AgentOutput>) {
+    console.log('🔍 Performing cross-agent validation and conflict detection...');
+    
+    const conflicts: Array<{
+      type: string;
+      agents: string[];
+      description: string;
+      severity: 'low' | 'medium' | 'high';
+      impact: number;
+    }> = [];
+    
+    const consensus: Record<string, any> = {};
+    const outliers: string[] = [];
+    
+    try {
+      // Extract signals from each agent (excluding zero-confidence agents)
+      const validAgents = Object.entries(results).filter(([_, result]) => (result.confidence || 0) > 0);
+      
+      if (validAgents.length < 2) {
+        return {
+          conflicts,
+          consensus: { insufficient_data: true },
+          outliers,
+          conflictScore: 0,
+          consensusStrength: 0
+        };
+      }
+      
+      // 1. DIRECTIONAL CONFLICTS
+      const directions = validAgents.map(([agent, result]) => {
+        let direction = 'neutral';
+        
+        // Extract directional signals from different agent types
+        if (result.data?.trend?.direction) {
+          direction = result.data.trend.direction;
+        } else if (result.data?.prediction?.direction) {
+          direction = result.data.prediction.direction;
+        } else if (result.data?.sentiment?.overall) {
+          direction = result.data.sentiment.overall === 'bullish' ? 'bullish' : 
+                    result.data.sentiment.overall === 'bearish' ? 'bearish' : 'neutral';
+        } else if (result.data?.consensus?.bullish > result.data?.consensus?.bearish) {
+          direction = 'bullish';
+        } else if (result.data?.consensus?.bearish > result.data?.consensus?.bullish) {
+          direction = 'bearish';
+        }
+        
+        return { agent, direction, confidence: result.confidence };
+      });
+      
+      // Detect directional conflicts
+      const bullish = directions.filter(d => d.direction === 'bullish').length;
+      const bearish = directions.filter(d => d.direction === 'bearish').length;
+      const neutral = directions.filter(d => d.direction === 'neutral').length;
+      
+      if (bullish > 0 && bearish > 0) {
+        const conflictSeverity = Math.abs(bullish - bearish) <= 1 ? 'high' : 'medium';
+        conflicts.push({
+          type: 'directional_conflict',
+          agents: directions.filter(d => d.direction !== 'neutral').map(d => d.agent),
+          description: `${bullish} agents bullish vs ${bearish} agents bearish`,
+          severity: conflictSeverity,
+          impact: Math.min(bullish, bearish) / validAgents.length
+        });
+      }
+      
+      // 2. CONFIDENCE OUTLIERS
+      const confidences = validAgents.map(([agent, result]) => ({
+        agent,
+        confidence: result.confidence || 0
+      }));
+      
+      const avgConfidence = confidences.reduce((sum, c) => sum + c.confidence, 0) / confidences.length;
+      const confidenceStdDev = Math.sqrt(
+        confidences.reduce((sum, c) => sum + Math.pow(c.confidence - avgConfidence, 2), 0) / confidences.length
+      );
+      
+      confidences.forEach(({ agent, confidence }) => {
+        if (Math.abs(confidence - avgConfidence) > confidenceStdDev * 2) {
+          outliers.push(agent);
+          conflicts.push({
+            type: 'confidence_outlier',
+            agents: [agent],
+            description: `${agent} confidence (${confidence}%) deviates significantly from average (${avgConfidence.toFixed(1)}%)`,
+            severity: 'medium',
+            impact: 0.1
+          });
+        }
+      });
+      
+      // 3. FLOW vs TECHNICAL CONFLICTS
+      const flowAgent = results.flow;
+      const quantAgent = results.quant;
+      
+      if (flowAgent && quantAgent && flowAgent.confidence > 0 && quantAgent.confidence > 0) {
+        const flowBullish = flowAgent.data?.institutionalFlows?.etfFlows?.netFlow > 0 ||
+                           flowAgent.data?.consensus?.bullish > flowAgent.data?.consensus?.bearish;
+        const quantBullish = quantAgent.data?.trend?.direction === 'bullish' ||
+                            quantAgent.data?.consensus?.bullish > quantAgent.data?.consensus?.bearish;
+        
+        if (flowBullish !== quantBullish) {
+          conflicts.push({
+            type: 'flow_technical_conflict',
+            agents: ['flow', 'quant'],
+            description: `Flow analysis ${flowBullish ? 'bullish' : 'bearish'} vs Technical analysis ${quantBullish ? 'bullish' : 'bearish'}`,
+            severity: 'high',
+            impact: 0.2
+          });
+        }
+      }
+      
+      // 4. CALCULATE CONSENSUS
+      consensus.directional = {
+        bullish: bullish / validAgents.length,
+        bearish: bearish / validAgents.length,
+        neutral: neutral / validAgents.length,
+        dominant: bullish > bearish ? 'bullish' : bearish > bullish ? 'bearish' : 'neutral'
+      };
+      
+      consensus.confidence = {
+        average: avgConfidence,
+        stdDev: confidenceStdDev,
+        range: {
+          min: Math.min(...confidences.map(c => c.confidence)),
+          max: Math.max(...confidences.map(c => c.confidence))
+        }
+      };
+      
+      // 5. CALCULATE CONFLICT METRICS
+      const conflictScore = conflicts.reduce((sum, conflict) => {
+        const severityWeight = conflict.severity === 'high' ? 1.0 : conflict.severity === 'medium' ? 0.6 : 0.3;
+        return sum + (conflict.impact * severityWeight);
+      }, 0);
+      
+      const consensusStrength = 1 - Math.min(1, conflictScore);
+      
+      console.log(`🔍 Cross-validation complete: ${conflicts.length} conflicts detected, consensus strength: ${(consensusStrength * 100).toFixed(1)}%`);
+      
+      if (conflicts.length > 0) {
+        console.log('⚠️  Major conflicts detected:');
+        conflicts.forEach(conflict => {
+          if (conflict.severity === 'high') {
+            console.log(`   🚨 ${conflict.type}: ${conflict.description}`);
+          }
+        });
+      }
+      
+      return {
+        conflicts,
+        consensus,
+        outliers,
+        conflictScore: Math.round(conflictScore * 100) / 100,
+        consensusStrength: Math.round(consensusStrength * 100) / 100
+      };
+      
+    } catch (error) {
+      console.error('Error in cross-agent validation:', error);
+      return {
+        conflicts: [{ type: 'validation_error', agents: [], description: 'Cross-validation failed', severity: 'medium' as const, impact: 0.1 }],
+        consensus: { error: true },
+        outliers: [],
+        conflictScore: 0.5,
+        consensusStrength: 0.5
+      };
+    }
   }
 
   // Method to get individual agent results for debugging
