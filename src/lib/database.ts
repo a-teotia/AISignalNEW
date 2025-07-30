@@ -75,7 +75,8 @@ class DatabaseManager {
         sl REAL,
         timeframe TEXT,
         style TEXT,
-        UNIQUE(user_id, symbol, prediction_date)
+        -- Removed unique constraint to allow multiple predictions per symbol per day
+        -- UNIQUE(user_id, symbol, prediction_date)
       )
     `);
 
@@ -108,7 +109,7 @@ class DatabaseManager {
   // Save a new prediction verdict
   savePredictionVerdict(prediction: Omit<PredictionVerdict, 'id' | 'created_at'>): number {
     const stmt = this.db.prepare(`
-      INSERT OR REPLACE INTO prediction_verdicts 
+      INSERT INTO prediction_verdicts 
       (user_id, symbol, prediction_date, verdict, confidence, reasoning, market_context, created_at, entry, tp, sl, timeframe, style)
       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), ?, ?, ?, ?, ?)
     `);

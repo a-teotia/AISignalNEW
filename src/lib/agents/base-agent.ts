@@ -1,5 +1,5 @@
 import { AgentInput, AgentOutput, AgentConfig } from '../types/prediction-types';
-import { CentralizedDataProvider, ComprehensiveData } from '../centralized-data-provider';
+import { ComprehensiveDataResult as ComprehensiveData } from '../services/types';
 import { validateAgentData, validateAgentOutput } from '../validation/data-schemas';
 
 export abstract class BaseAgent {
@@ -151,23 +151,28 @@ export abstract class BaseAgent {
   }
 
   /**
-   * Get comprehensive data from centralized data provider
+   * Get comprehensive data from modular data provider
    */
   protected async getCentralizedData(symbol: string): Promise<ComprehensiveData> {
     try {
-      return await CentralizedDataProvider.getComprehensiveData(symbol);
+      const { createDataProviderOrchestrator } = await import('../services');
+      const orchestrator = await createDataProviderOrchestrator();
+      return await orchestrator.getComprehensiveData(symbol);
     } catch (error) {
-      console.error(`${this.config.name} Centralized data error:`, error);
+      console.error(`${this.config.name} Modular data provider error:`, error);
       throw error;
     }
   }
 
   /**
-   * Get market data from centralized provider (backward compatibility)
+   * Get market data from modular provider (backward compatibility)
    */
   protected async getRapidAPIMarketData(symbol: string): Promise<any> {
     try {
-      const data = await CentralizedDataProvider.getComprehensiveData(symbol);
+      const { createDataProviderOrchestrator } = await import('../services');
+      const orchestrator = await createDataProviderOrchestrator();
+      const data = await orchestrator.getComprehensiveData(symbol);
+      
       return {
         price: data.marketData.price,
         change: data.marketData.change,
@@ -181,7 +186,7 @@ export abstract class BaseAgent {
         quality: data.marketData.quality
       };
     } catch (error) {
-      console.error(`${this.config.name} Centralized data error:`, error);
+      console.error(`${this.config.name} Modular data provider error:`, error);
       return null;
     }
   }

@@ -50,16 +50,35 @@ export class OnChainAgent extends BaseAgent {
     // Get comprehensive data from centralized provider
     const centralizedData = await this.getCentralizedData(input.symbol);
     
-    // Get on-chain data from APIs
-          const onChainData = await this.getOnChainData(input.symbol);
-      
-      // Note: Real-time market data available from centralized provider
-      const hasRealTimeData = centralizedData.overallQuality === 'realtime';
-      
-      // Handle different data structures for crypto vs stocks
-      const isCrypto = input.symbol.includes('BTC') || input.symbol.includes('ETH');
-      const cryptoData = isCrypto && onChainData && 'hashRate' in onChainData ? onChainData : null;
-      const stockData = !isCrypto && onChainData && 'institutionalFlow' in onChainData ? onChainData : null;
+    // STRICT VALIDATION: Only proceed with real live data
+    if (!centralizedData || !centralizedData.marketData) {
+      throw new Error(`[OnChainAgent] No live market data available for ${input.symbol}. Refusing to generate predictions without real data.`);
+    }
+    
+    // Validate data quality - must be real-time or recent cached
+    if (centralizedData.overallQuality !== 'realtime' && centralizedData.overallQuality !== 'cached') {
+      throw new Error(`[OnChainAgent] Data quality insufficient (${centralizedData.overallQuality}). Only real-time or recent cached data accepted.`);
+    }
+    
+    // Get on-chain data from real APIs only - NO SYNTHETIC FALLBACKS
+    const onChainData = await this.getRealOnChainDataOnly(input.symbol);
+    
+    if (!onChainData) {
+      throw new Error(`[OnChainAgent] No real on-chain/institutional data available for ${input.symbol}. Cannot proceed without blockchain/institutional metrics.`);
+    }
+    
+    // Handle different data structures for crypto vs stocks
+    const isCrypto = input.symbol.includes('BTC') || input.symbol.includes('ETH');
+    const cryptoData = isCrypto && onChainData && 'hashRate' in onChainData ? onChainData : null;
+    const stockData = !isCrypto && onChainData && 'institutionalFlow' in onChainData ? onChainData : null;
+    
+    if (isCrypto && !cryptoData) {
+      throw new Error(`[OnChainAgent] No valid blockchain data for crypto asset ${input.symbol}`);
+    }
+    
+    if (!isCrypto && !stockData) {
+      throw new Error(`[OnChainAgent] No valid institutional data for stock ${input.symbol}`);
+    }
       
       const prompt = `
         Analyze ${input.symbol} on-chain/institutional metrics using this data: ${JSON.stringify(onChainData)}
@@ -151,22 +170,26 @@ export class OnChainAgent extends BaseAgent {
         } catch (extractError) {
           console.error('[OnChainAgent] Failed to parse extracted JSON:', extractError);
           console.log('[OnChainAgent] Extracted JSON was:', extractedJSON);
-          data = this.getFallbackData();
+          throw new Error(`[OnChainAgent] Unable to parse LLM response for ${input.symbol}. Cannot generate prediction without valid analysis.`);
         }
       } else {
         console.error('[OnChainAgent] No valid JSON found in response');
         console.log('[OnChainAgent] Raw response content:', result.content.substring(0, 500) + '...');
-        data = this.getFallbackData();
+        throw new Error(`[OnChainAgent] LLM failed to provide valid analysis for ${input.symbol}. Cannot proceed without structured data.`);
       }
     }
     
-    // Defensive: ensure data is a proper object, not a number or array
+    // Strict validation: ensure data is a proper object with required fields
     if (!data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).length === 0) {
-      console.error('[OnChainAgent] Invalid data format, using fallback');
-      data = this.getFallbackData();
+      throw new Error(`[OnChainAgent] Invalid data format from LLM for ${input.symbol}. Expected object with content, got ${typeof data}`);
     }
     
-    const confidence = data.confidence || this.calculateOnChainConfidence(data);
+    // Validate required fields
+    if (!data.confidence || typeof data.confidence !== 'number' || data.confidence < 1 || data.confidence > 100) {
+      throw new Error(`[OnChainAgent] Invalid confidence score for ${input.symbol}: ${data.confidence}`);
+    }
+    
+    const confidence = data.confidence; // Use LLM confidence only, no fallback calculations
     const sources = [
       ...(data.sources || [
         input.symbol.includes('BTC') || input.symbol.includes('ETH') ? 'https://blockchain.info' : 'https://finance.yahoo.com',
@@ -195,29 +218,25 @@ export class OnChainAgent extends BaseAgent {
     };
   }
 
-  private async getOnChainData(symbol: string) {
-    try {
-      const isCrypto = symbol.includes('BTC') || symbol.includes('ETH');
-      
-      if (isCrypto) {
-        // Real blockchain data for crypto
-        const blockchainData = await this.getRealBlockchainData(symbol);
-        if (blockchainData) {
-          return blockchainData;
-        }
-      } else {
-        // Real institutional data for ASX stocks
-        const institutionalData = await this.getInstitutionalData(symbol);
-        if (institutionalData) {
-          return institutionalData;
-        }
+  private async getRealOnChainDataOnly(symbol: string) {
+    const isCrypto = symbol.includes('BTC') || symbol.includes('ETH');
+    
+    if (isCrypto) {
+      // Real blockchain data for crypto - NO FALLBACKS
+      const blockchainData = await this.getRealBlockchainData(symbol);
+      if (!blockchainData) {
+        console.error(`[OnChainAgent] Failed to fetch real blockchain data for ${symbol}`);
+        return null;
       }
-      
-      // Enhanced fallback with realistic data
-      return this.getEnhancedOnChainData(symbol);
-    } catch (error) {
-      console.error('Error fetching on-chain data:', error);
-      return this.getEnhancedOnChainData(symbol);
+      return blockchainData;
+    } else {
+      // Real institutional data for ASX stocks - NO FALLBACKS
+      const institutionalData = await this.getInstitutionalData(symbol);
+      if (!institutionalData) {
+        console.error(`[OnChainAgent] Failed to fetch real institutional data for ${symbol}`);
+        return null;
+      }
+      return institutionalData;
     }
   }
 
@@ -296,23 +315,29 @@ export class OnChainAgent extends BaseAgent {
       // Use Yahoo Finance institutional data from centralized provider
       const baseUrl = getBaseUrl();
       const response = await fetch(`${baseUrl}/api/market-data?symbol=${encodeURIComponent(symbol)}`);
-      const data = await response.json();
       
-      if (data && data.institutionalData) {
-        return {
-          institutionalFlow: this.calculateInstitutionalFlow(data.institutionalData),
-          volumeChange: this.calculateVolumeChange(data.institutionalData),
-          averageVolume: this.calculateAverageVolume(data.institutionalData),
-          currentVolume: data.institutionalData.majorHolders.reduce((sum: number, holder: any) => sum + holder.value, 0),
-          marketActivity: this.determineMarketActivity(data.institutionalData)
-        };
+      if (!response.ok) {
+        console.error(`[OnChainAgent] API request failed: ${response.status} ${response.statusText}`);
+        return null;
       }
       
-      // Enhanced fallback with realistic institutional data
-      return this.getEnhancedInstitutionalData(symbol);
+      const data = await response.json();
+      
+      if (!data || !data.institutionalData || !data.institutionalData.majorHolders) {
+        console.error(`[OnChainAgent] No institutional data available in API response for ${symbol}`);
+        return null;
+      }
+      
+      return {
+        institutionalFlow: this.calculateInstitutionalFlow(data.institutionalData),
+        volumeChange: this.calculateVolumeChange(data.institutionalData),
+        averageVolume: this.calculateAverageVolume(data.institutionalData),
+        currentVolume: data.institutionalData.majorHolders.reduce((sum: number, holder: any) => sum + holder.value, 0),
+        marketActivity: this.determineMarketActivity(data.institutionalData)
+      };
     } catch (error) {
       console.error('Error fetching institutional data:', error);
-      return this.getEnhancedInstitutionalData(symbol);
+      return null;
     }
   }
 
@@ -354,88 +379,9 @@ export class OnChainAgent extends BaseAgent {
     return 'normal';
   }
 
-  private getEnhancedInstitutionalData(symbol: string) {
-    const isCrypto = symbol.includes('BTC') || symbol.includes('ETH');
-    const basePrice = isCrypto ? 45000 : 100;
-    const totalShares = isCrypto ? 1000000 : 10000000;
-    
-    // Generate realistic institutional data
-    const institutionalValue = Math.floor(totalShares * 0.75 * basePrice);
-    const volumeChange = (Math.random() - 0.5) * 20; // -10% to +10%
-    const averageVolume = institutionalValue / 5; // Average per major holder
-    
-    return {
-      institutionalFlow: Math.random() > 0.5 ? 'moderate_buying' : 'moderate_selling',
-      volumeChange,
-      averageVolume,
-      currentVolume: institutionalValue,
-      marketActivity: 'moderate_institutional'
-    };
-  }
+  // REMOVED: No synthetic institutional data generation
 
-  private getEnhancedOnChainData(symbol: string) {
-    const isCrypto = symbol.includes('BTC') || symbol.includes('ETH');
-    
-    if (isCrypto) {
-      // Enhanced crypto data based on market averages
-      const baseMetrics = {
-        'BTC-USD': { hashRate: 500000000000, activeAddresses: 1000000, tvl: 45000000000 },
-        'ETH-USD': { hashRate: 800000000, activeAddresses: 800000, tvl: 85000000000 },
-        'default': { hashRate: 100000000, activeAddresses: 500000, tvl: 10000000000 }
-      };
-      
-      const metrics = baseMetrics[symbol as keyof typeof baseMetrics] || baseMetrics.default;
-      const netFlow = (Math.random() - 0.5) * 1000;
-      
-      return {
-        networkMetrics: {
-          hashRate: metrics.hashRate + (Math.random() - 0.5) * metrics.hashRate * 0.1,
-          activeAddresses: metrics.activeAddresses + Math.floor((Math.random() - 0.5) * 100000),
-          transactionCount: 500000 + Math.floor(Math.random() * 200000),
-          averageTransactionValue: 0.1,
-          networkDifficulty: 20000000000 + Math.floor(Math.random() * 10000000000)
-        },
-        whaleActivity: {
-          largeTransactions: 45 + Math.floor(Math.random() * 20),
-          whaleWallets: 1250 + Math.floor(Math.random() * 100),
-          exchangeFlows: {
-            toExchanges: -2500 + Math.floor((Math.random() - 0.5) * 1000),
-            fromExchanges: 1800 + Math.floor((Math.random() - 0.5) * 800),
-            netFlow: netFlow
-          },
-          topHolders: [
-            { address: '0x123...', balance: 125000, percentage: 0.6 },
-            { address: '0x456...', balance: 85000, percentage: 0.4 }
-          ]
-        },
-        defiMetrics: {
-          totalValueLocked: metrics.tvl + (Math.random() - 0.5) * metrics.tvl * 0.05,
-          stakingRatio: 0.72 + (Math.random() - 0.5) * 0.1,
-          lendingVolume: 8500000000 + (Math.random() - 0.5) * 2000000000,
-          dexVolume: 2500000000 + (Math.random() - 0.5) * 500000000
-        }
-      };
-    } else {
-      // Enhanced ASX institutional data
-      const baseVolume = 5000000;
-      const volumeChange = (Math.random() - 0.5) * 100;
-      const institutionalRatio = 0.3 + (Math.random() - 0.5) * 0.2;
-      
-      return {
-        institutionalFlow: volumeChange > 30 ? 'high' : 'normal',
-        volumeChange: volumeChange,
-        averageVolume: baseVolume,
-        currentVolume: baseVolume * (1 + volumeChange / 100),
-        marketActivity: volumeChange > 0 ? 'increasing' : 'decreasing',
-        institutionalMetrics: {
-          largeTransactions: Math.abs(volumeChange) > 20 ? Math.floor(Math.abs(volumeChange) / 5) : 0,
-          institutionalVolume: baseVolume * institutionalRatio,
-          retailVolume: baseVolume * (1 - institutionalRatio),
-          institutionalRatio: institutionalRatio
-        }
-      };
-    }
-  }
+  // REMOVED: No synthetic on-chain data generation
 
   private calculateOnChainConfidence(data: OnChainData): number {
     const factors = {
@@ -465,33 +411,5 @@ export class OnChainAgent extends BaseAgent {
     return Math.min(100, strength);
   }
 
-  private getFallbackData(): OnChainData {
-    return {
-      networkMetrics: {
-        hashRate: 0,
-        activeAddresses: 0,
-        transactionCount: 0,
-        averageTransactionValue: 0,
-        networkDifficulty: 0
-      },
-      whaleActivity: {
-        largeTransactions: 0,
-        whaleWallets: 0,
-        exchangeFlows: {
-          toExchanges: 0,
-          fromExchanges: 0,
-          netFlow: 0
-        },
-        topHolders: []
-      },
-      defiMetrics: {
-        totalValueLocked: 0,
-        stakingRatio: 0,
-        lendingVolume: 0,
-        dexVolume: 0
-      },
-      confidence: 50,
-      sources: []
-    };
-  }
+  // REMOVED: No fallback data - predictions must be based on live data only
 } 

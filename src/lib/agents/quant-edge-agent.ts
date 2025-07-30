@@ -1,5 +1,4 @@
 import { BaseAgent } from './base-agent';
-import { CentralizedDataProvider } from '../centralized-data-provider';
 import { AgentInput, AgentOutput, QuantEdgeData } from '../types/prediction-types';
 import { getBaseUrl } from '../utils';
 
@@ -25,22 +24,30 @@ export class QuantEdgeAgent extends BaseAgent {
     // Get comprehensive data from centralized provider
     const centralizedData = await this.getCentralizedData(input.symbol);
     
-    // Use technical data directly from centralized provider - no duplicate API calls
-    const technicalData = this.transformCentralizedTechnicalData(centralizedData);
+    // STRICT VALIDATION: Only proceed with real live data
+    if (!centralizedData || !centralizedData.technicalData || !centralizedData.marketData) {
+      throw new Error(`[QuantEdgeAgent] No live technical data available for ${input.symbol}. Refusing to generate predictions without real market data.`);
+    }
     
-    // Note: Real-time market data available from centralized provider
-    const hasRealTimeData = centralizedData.overallQuality === 'realtime';
+    // Validate data quality - must be real-time or recent cached
+    if (centralizedData.overallQuality !== 'realtime' && centralizedData.overallQuality !== 'cached') {
+      throw new Error(`[QuantEdgeAgent] Data quality insufficient (${centralizedData.overallQuality}). Only real-time or recent cached data accepted.`);
+    }
     
-    // 🏆 GOLD STANDARD: Use mathematical algorithms instead of LLM guessing
-    console.log(`🧮 Performing algorithmic technical analysis for ${input.symbol}...`);
+    // Validate technical indicators are present
+    const technicalData = centralizedData.technicalData;
+    if (!technicalData.rsi || !technicalData.macd || !technicalData.sma) {
+      throw new Error(`[QuantEdgeAgent] Missing critical technical indicators for ${input.symbol}. Cannot proceed without RSI, MACD, and SMA data.`);
+    }
     
-    // Calculate real technical analysis using mathematical algorithms
-    let data = await this.performAlgorithmicTechnicalAnalysis(input.symbol, technicalData, centralizedData);
+    console.log(`🧮 Performing algorithmic technical analysis for ${input.symbol} with live data...`);
     
-    // Fallback if algorithmic analysis fails
+    // Calculate real technical analysis using mathematical algorithms - NO FALLBACKS
+    const data = await this.performAlgorithmicTechnicalAnalysis(input.symbol, technicalData, centralizedData);
+    
+    // Validate analysis results
     if (!data || !data.indicators) {
-      console.warn('[QuantEdgeAgent] Algorithmic analysis failed, using fallback data');
-      data = this.getFallbackData();
+      throw new Error(`[QuantEdgeAgent] Algorithmic analysis failed for ${input.symbol}. Cannot generate prediction without valid technical analysis.`);
     }
     
     const confidence = data.confidence || this.calculateTechnicalConfidence(data);
@@ -72,71 +79,57 @@ export class QuantEdgeAgent extends BaseAgent {
     };
   }
 
-  private transformCentralizedTechnicalData(centralizedData: any) {
-    // Use real technical data from Yahoo Finance via centralized provider
+  private validateTechnicalData(centralizedData: any) {
+    // Strict validation - no fallbacks, no defaults
     const technicalData = centralizedData.technicalData;
     const marketData = centralizedData.marketData;
     
-    if (technicalData) {
-      // Return structured technical indicators from Yahoo Finance
-      return {
-        rsi: { 
-          value: technicalData.rsi || 50, 
-          signal: technicalData.rsi > 70 ? 'overbought' : technicalData.rsi < 30 ? 'oversold' : 'neutral' 
-        },
-        macd: { 
-          value: technicalData.macd?.value || 0, 
-          signal: technicalData.macd?.value > technicalData.macd?.signal ? 'bullish' : 'bearish' 
-        },
-        bollinger: { 
-          position: marketData?.price > technicalData.bollinger?.upper ? 'above' : 
-                   marketData?.price < technicalData.bollinger?.lower ? 'below' : 'middle',
-          signal: 'neutral'
-        },
-        ema: { 
-          short: technicalData.sma?.sma20 || marketData?.price || 0, 
-          long: technicalData.sma?.sma50 || marketData?.price || 0, 
-          signal: (technicalData.sma?.sma20 || 0) > (technicalData.sma?.sma50 || 0) ? 'bullish' : 'bearish' 
-        },
-        ichimoku: { signal: 'neutral' }
-      };
+    if (!technicalData || !marketData) {
+      throw new Error('Missing technical or market data - cannot proceed');
     }
     
-    // Fallback if no technical data available
-    return this.getEnhancedTechnicalData(centralizedData.marketData?.symbol || 'Unknown');
-  }
-
-  private getEnhancedTechnicalData(symbol: string) {
-    const isCrypto = symbol.includes('BTC') || symbol.includes('ETH');
-    const basePrice = isCrypto ? 45000 : 100;
-    const volatility = isCrypto ? 0.04 : 0.02;
+    // Validate all required indicators are present and valid
+    if (typeof technicalData.rsi !== 'number' || technicalData.rsi < 0 || technicalData.rsi > 100) {
+      throw new Error(`Invalid RSI value: ${technicalData.rsi}`);
+    }
     
-    const priceChange = (Math.random() - 0.5) * 2 * volatility;
-    const currentPrice = basePrice * (1 + priceChange);
+    if (!technicalData.macd || typeof technicalData.macd.value !== 'number') {
+      throw new Error('Invalid MACD data');
+    }
     
-    // Calculate realistic technical indicators
-    const rsi = 50 + (Math.random() - 0.5) * 40; // 30-70 range
-    const macdValue = (Math.random() - 0.5) * 2;
-    const macdSignal = macdValue + (Math.random() - 0.5) * 0.5;
-    const macdHistogram = macdValue - macdSignal;
+    if (!technicalData.sma || typeof technicalData.sma.sma20 !== 'number' || typeof technicalData.sma.sma50 !== 'number') {
+      throw new Error('Invalid SMA data');
+    }
     
-    const sma20 = currentPrice * (1 + (Math.random() - 0.5) * 0.05);
-    const sma50 = currentPrice * (1 + (Math.random() - 0.5) * 0.1);
-    const sma200 = currentPrice * (1 + (Math.random() - 0.5) * 0.2);
+    if (typeof marketData.price !== 'number' || marketData.price <= 0) {
+      throw new Error(`Invalid market price: ${marketData.price}`);
+    }
     
-    const bollingerStd = currentPrice * 0.02;
-    const bollingerMiddle = sma20;
-    const bollingerUpper = bollingerMiddle + (2 * bollingerStd);
-    const bollingerLower = bollingerMiddle - (2 * bollingerStd);
-    
+    // Return validated technical data structure
     return {
-      rsi: { value: rsi, signal: rsi > 70 ? 'overbought' : rsi < 30 ? 'oversold' : 'neutral' },
-      macd: { value: macdValue, signal: macdValue > macdSignal ? 'bullish' : 'bearish' },
-      bollinger: { position: currentPrice > bollingerUpper ? 'above' : currentPrice < bollingerLower ? 'below' : 'middle', signal: 'neutral' },
-      ema: { short: sma20, long: sma50, signal: sma20 > sma50 ? 'bullish' : 'bearish' },
-      ichimoku: { signal: 'neutral' }
+      rsi: { 
+        value: technicalData.rsi, 
+        signal: technicalData.rsi > 70 ? 'overbought' : technicalData.rsi < 30 ? 'oversold' : 'neutral' 
+      },
+      macd: { 
+        value: technicalData.macd.value, 
+        signal: technicalData.macd.value > (technicalData.macd.signal || 0) ? 'bullish' : 'bearish' 
+      },
+      bollinger: { 
+        position: technicalData.bollinger ? 
+          (marketData.price > technicalData.bollinger.upper ? 'above' : 
+           marketData.price < technicalData.bollinger.lower ? 'below' : 'middle') : 'unknown',
+        signal: 'neutral'
+      },
+      sma: { 
+        sma20: technicalData.sma.sma20, 
+        sma50: technicalData.sma.sma50, 
+        signal: technicalData.sma.sma20 > technicalData.sma.sma50 ? 'bullish' : 'bearish' 
+      }
     };
   }
+
+  // REMOVED: No synthetic data generation - only live data accepted
 
   private calculateTechnicalConfidence(data: QuantEdgeData): number {
     const factors = {
@@ -149,17 +142,18 @@ export class QuantEdgeAgent extends BaseAgent {
     return this.calculateConfidence(factors);
   }
 
-  // 🏆 GOLD STANDARD: Mathematical technical analysis instead of LLM guessing
+  // LIVE DATA ONLY: Mathematical technical analysis with strict validation
   private async performAlgorithmicTechnicalAnalysis(symbol: string, technicalData: any, centralizedData: any): Promise<QuantEdgeData> {
-    try {
-      console.log(`🧮 Starting algorithmic technical analysis for ${symbol}...`);
-      
-      // Extract real technical indicators from TwelveData/centralized provider
-      const rsi = technicalData?.rsi || 50;
-      const macd = technicalData?.macd || { value: 0, signal: 0, histogram: 0 };
-      const bollinger = technicalData?.bollinger || { upper: 0, middle: 0, lower: 0 };
-      const sma = technicalData?.sma || { sma20: 0, sma50: 0 };
-      const currentPrice = centralizedData?.marketData?.price || 0;
+    console.log(`🧮 Starting algorithmic technical analysis for ${symbol} with validated live data...`);
+    
+    // Validate and extract technical data - NO DEFAULTS OR FALLBACKS
+    const validatedData = this.validateTechnicalData(centralizedData);
+    
+    const rsi = validatedData.rsi.value;
+    const macd = centralizedData.technicalData.macd;
+    const bollinger = centralizedData.technicalData.bollinger || null;
+    const sma = validatedData.sma;
+    const currentPrice = centralizedData.marketData.price;
       
       // 🎯 ALGORITHMIC SIGNAL GENERATION
       
@@ -225,10 +219,7 @@ export class QuantEdgeAgent extends BaseAgent {
       console.log(`✅ Algorithmic analysis completed: trend=${trendAnalysis.direction}, confidence=${confidence}%`);
       return result;
       
-    } catch (error) {
-      console.error('Error in algorithmic technical analysis:', error);
-      return this.getFallbackData();
-    }
+    // No try-catch with fallback - let errors propagate to fail the prediction
   }
   
   private calculateTrendAlgorithmically(rsi: number, macd: any, price: number, sma: any) {
@@ -308,35 +299,5 @@ export class QuantEdgeAgent extends BaseAgent {
     return patterns;
   }
 
-  private getFallbackData(): QuantEdgeData {
-    return {
-      indicators: {
-        rsi: { value: 50, signal: 'neutral' },
-        macd: { value: 0, signal: 'neutral' },
-        bollinger: { position: 'middle', signal: 'neutral' },
-        ema: { short: 0, long: 0, signal: 'neutral' },
-        ichimoku: { signal: 'neutral' }
-      },
-      patterns: {
-        detected: [],
-        confidence: []
-      },
-      levels: {
-        support: [],
-        resistance: []
-      },
-      trend: {
-        direction: 'neutral',
-        strength: 50,
-        confidence: 50
-      },
-      consensus: {
-        bullish: 33,
-        bearish: 33,
-        neutral: 34
-      },
-      confidence: 50,
-      sources: []
-    };
-  }
+  // REMOVED: No fallback data - predictions must be based on live data only
 }

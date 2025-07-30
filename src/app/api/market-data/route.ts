@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CentralizedDataProvider } from '../../../lib/centralized-data-provider';
+import { createDataProviderOrchestrator } from '../../../lib/services';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -13,8 +13,9 @@ export async function GET(request: NextRequest) {
     console.log(`📊 API: Getting comprehensive market data with technical indicators for ${symbol}`);
     const startTime = Date.now();
     
-    // 🔧 FIX: Use comprehensive data provider instead of basic market data
-    const comprehensiveData = await CentralizedDataProvider.getComprehensiveData(symbol);
+    // 🔧 FIX: Use modular data provider orchestrator instead of basic market data
+    const orchestrator = await createDataProviderOrchestrator();
+    const comprehensiveData = await orchestrator.getComprehensiveData(symbol);
     
     const processingTime = Date.now() - startTime;
     

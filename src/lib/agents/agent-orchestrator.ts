@@ -58,9 +58,10 @@ export class AgentOrchestrator {
         const result = SignalValidator.validateAgentOutput(agentResults[i]);
         const agentName = agentNames[i];
         
-        // Always include the agent result, but log if it has zero confidence
+        // STRICT: Exclude agents with zero confidence - no predictions without valid data
         if (result.confidence === 0) {
-          console.log(`⚠️  ${agentName} has zero confidence - using fallback data`);
+          console.log(`❌ ${agentName} has zero confidence - EXCLUDING from synthesis (no valid data)`);
+          continue; // Skip this agent entirely
         }
         
         validatedResults[agentName] = result;
@@ -76,23 +77,20 @@ export class AgentOrchestrator {
         }
       });
 
-      // 🏆 GOLD STANDARD: Check if we have enough quality data
-      const qualityThreshold = 60; // Minimum quality score
-      const lowQualityAgents = Object.entries(validatedResults).filter(([_, result]) => 
-        result.quality.overallQuality < qualityThreshold
+      // STRICT: Fail if insufficient high-quality agents
+      const qualityThreshold = 70; // Increased minimum quality score
+      const highQualityAgents = Object.entries(validatedResults).filter(([_, result]) => 
+        result.quality.overallQuality >= qualityThreshold
       );
-
-      if (lowQualityAgents.length > 3) {
-        console.warn(`⚠️  Warning: ${lowQualityAgents.length} agents have low quality data (<${qualityThreshold})`);
-        console.warn(`   Low quality agents: ${lowQualityAgents.map(([agent, result]) => 
-          `${agent}(${result.quality.overallQuality})`).join(', ')}`);
-        
-        // Log data sources to help debug
-        console.warn(`🔍 Data source analysis for ${symbol}:`);
-        Object.entries(validatedResults).forEach(([agent, result]) => {
-          console.warn(`   ${agent}: sources=${result.sources.join(', ')}, quality=${result.quality.overallQuality}`);
-        });
+      
+      const minimumRequiredAgents = 3; // Need at least 3 high-quality agents
+      
+      if (highQualityAgents.length < minimumRequiredAgents) {
+        const availableAgents = Object.keys(validatedResults).length;
+        throw new Error(`Insufficient high-quality data for ${symbol}. Only ${highQualityAgents.length}/${availableAgents} agents meet quality threshold (${qualityThreshold}%). Minimum required: ${minimumRequiredAgents}. Refusing to generate unreliable predictions.`);
       }
+      
+      console.log(`✅ Quality validation passed: ${highQualityAgents.length}/${Object.keys(validatedResults).length} agents meet quality threshold`);
 
       // Log each agent's result for debugging (with better formatting)
       logAgentResult('SonarResearchAgent', validatedResults.sonar);
@@ -109,23 +107,30 @@ export class AgentOrchestrator {
       // Run synthesis agent with validated context
       console.log('🧩 Running synthesis agent with validated data...');
       
-      // Prepare context for synthesis agent, filtering out zero-confidence data
+      // Prepare context for synthesis agent - only include validated high-quality data
       const synthesisContext: any = {};
       const contextKeys = ['sonarData', 'geoData', 'quantData', 'onchainData', 'flowData', 'microstructureData', 'mlData', 'marketStructureData'];
       const agentKeys = ['sonar', 'geo', 'quant', 'onchain', 'flow', 'microstructure', 'ml', 'marketstructure'];
+      
+      let includedAgents = 0;
       
       for (let i = 0; i < contextKeys.length; i++) {
         const contextKey = contextKeys[i];
         const agentKey = agentKeys[i];
         const agentResult = validatedResults[agentKey];
         
-        // Only include data from agents with reasonable confidence (>0)
-        if (agentResult && agentResult.confidence > 0) {
+        // Only include data from agents with high confidence and quality
+        if (agentResult && agentResult.confidence > 0 && agentResult.quality.overallQuality >= qualityThreshold) {
           synthesisContext[contextKey] = agentResult.data;
+          includedAgents++;
         } else {
-          console.log(`⚠️  Excluding ${agentKey} data from synthesis (confidence: ${agentResult?.confidence || 0})`);
+          console.log(`❌ Excluding ${agentKey} data from synthesis (confidence: ${agentResult?.confidence || 0}, quality: ${agentResult?.quality?.overallQuality || 0})`);
           synthesisContext[contextKey] = null;
         }
+      }
+      
+      if (includedAgents < minimumRequiredAgents) {
+        throw new Error(`Insufficient validated agents for synthesis of ${symbol}. Only ${includedAgents} agents passed quality/confidence checks. Minimum required: ${minimumRequiredAgents}.`);
       }
       
       const synthResult = await this.agents[8].process({
@@ -187,18 +192,19 @@ export class AgentOrchestrator {
         console.error(`   Error stack: ${error.stack?.substring(0, 500)}`);
       }
       
-      // Log API health status from centralized data provider
+      // Log API health status from modular data provider
       try {
-        const { CentralizedDataProvider } = await import('../centralized-data-provider');
-        const healthStatus = (CentralizedDataProvider as any).getApiHealth?.();
+        const { createDataProviderOrchestrator } = await import('../services');
+        const orchestrator = await createDataProviderOrchestrator();
+        const healthStatus = orchestrator.getServiceHealth();
         if (healthStatus) {
-          console.error('🏥 API Health Status:');
-          Object.entries(healthStatus).forEach(([api, health]) => {
-            console.error(`   ${api}: success rate ${((health as any).successRate * 100).toFixed(1)}%`);
+          console.error('🏥 Service Health Status:');
+          Object.entries(healthStatus).forEach(([service, health]) => {
+            console.error(`   ${service}: success rate ${(health.successRate * 100).toFixed(1)}%`);
           });
         }
       } catch (healthError) {
-        console.error('Unable to retrieve API health status:', healthError);
+        console.error('Unable to retrieve service health status:', healthError);
       }
       
       throw error;
@@ -409,13 +415,13 @@ export class AgentOrchestrator {
   }
 
   private calculateEntryPrice(prediction: any, allResults: Record<string, AgentOutput>): number {
-    // Try to get the best available price from agents, fallback to 0
+    // STRICT: Try to get valid price from agents - NO FALLBACK TO ZERO
     // Priority: microstructure.midPrice, quant.price, flow.marketData.currentPrice, onchain.currentPrice
     let price: number | undefined = undefined;
 
     // MicrostructureAgent (midPrice) - check both possible structures
     const micro = allResults.microstructure?.data;
-    if (micro) {
+    if (micro && allResults.microstructure.confidence > 0) {
       // Check if midPrice is directly in orderBook
       if (micro.orderBook && typeof micro.orderBook.midPrice === 'number' && micro.orderBook.midPrice > 0) {
         price = micro.orderBook.midPrice;
@@ -429,19 +435,19 @@ export class AgentOrchestrator {
     }
 
     // QuantEdgeAgent (price)
-    if (!price && allResults.quant?.data && allResults.quant.data.price && typeof allResults.quant.data.price.price === 'number' && allResults.quant.data.price.price > 0) {
+    if (!price && allResults.quant?.data && allResults.quant.confidence > 0 && allResults.quant.data.price && typeof allResults.quant.data.price.price === 'number' && allResults.quant.data.price.price > 0) {
       price = allResults.quant.data.price.price;
       console.log(`💰 Using QuantEdgeAgent price: ${price}`);
     }
 
     // FlowAgent (marketData.currentPrice)
-    if (!price && allResults.flow?.data && allResults.flow.data.marketData && typeof allResults.flow.data.marketData.currentPrice === 'number' && allResults.flow.data.marketData.currentPrice > 0) {
+    if (!price && allResults.flow?.data && allResults.flow.confidence > 0 && allResults.flow.data.marketData && typeof allResults.flow.data.marketData.currentPrice === 'number' && allResults.flow.data.marketData.currentPrice > 0) {
       price = allResults.flow.data.marketData.currentPrice;
       console.log(`💰 Using FlowAgent currentPrice: ${price}`);
     }
 
     // OnChainAgent (networkMetrics.currentPrice or currentPrice)
-    if (!price && allResults.onchain?.data) {
+    if (!price && allResults.onchain?.data && allResults.onchain.confidence > 0) {
       const onchainData = allResults.onchain.data;
       if (onchainData.networkMetrics && typeof onchainData.networkMetrics.currentPrice === 'number' && onchainData.networkMetrics.currentPrice > 0) {
         price = onchainData.networkMetrics.currentPrice;
@@ -452,16 +458,18 @@ export class AgentOrchestrator {
       }
     }
 
-    // Fallback to 0 if no price found
-    if (!price || isNaN(price)) {
-      price = 0;
-      console.log(`⚠️  No valid price found, using fallback: ${price}`);
+    // STRICT: Throw error if no valid price found instead of using fallback
+    if (!price || isNaN(price) || price <= 0) {
+      throw new Error(`No valid entry price available from any agent. Cannot generate trading prediction without real market price data.`);
     }
+    
     return price;
   }
 
   private calculateStopLoss(entryPrice: number, prediction: any, riskLevel: string): number {
-    if (!entryPrice || entryPrice === 0) return 0;
+    if (!entryPrice || entryPrice <= 0) {
+      throw new Error('Cannot calculate stop loss without valid entry price');
+    }
     const stopLossPercentages = { LOW: 0.02, MEDIUM: 0.03, HIGH: 0.05 };
     const percentage = stopLossPercentages[riskLevel as keyof typeof stopLossPercentages] || 0.03;
     
@@ -477,7 +485,9 @@ export class AgentOrchestrator {
   }
 
   private calculateTakeProfit(entryPrice: number, prediction: any, riskLevel: string): number {
-    if (!entryPrice || entryPrice === 0) return 0;
+    if (!entryPrice || entryPrice <= 0) {
+      throw new Error('Cannot calculate take profit without valid entry price');
+    }
     const takeProfitPercentages = { LOW: 0.04, MEDIUM: 0.06, HIGH: 0.10 };
     const percentage = takeProfitPercentages[riskLevel as keyof typeof takeProfitPercentages] || 0.06;
     

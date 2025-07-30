@@ -1,8 +1,8 @@
 import 'dotenv/config';
-import { CentralizedDataProvider } from './src/lib/centralized-data-provider';
+import { createDataProviderOrchestrator } from './src/lib/services';
 
 async function testDataProvider() {
-  console.log('🧪 Testing Centralized Data Provider\n');
+  console.log('🧪 Testing Modular Data Provider\n');
   console.log('='.repeat(60));
   
   // Test symbols for different asset types
@@ -22,7 +22,8 @@ async function testDataProvider() {
     
     try {
       const startTime = Date.now();
-      const data = await CentralizedDataProvider.getComprehensiveData(symbol);
+      const orchestrator = await createDataProviderOrchestrator();
+      const data = await orchestrator.getComprehensiveData(symbol);
       const processingTime = Date.now() - startTime;
       
       console.log(`✅ Data fetched in ${processingTime}ms`);
@@ -61,33 +62,48 @@ async function testDataProvider() {
     }
   }
   
-  // Test API health
-  console.log('\n\n🏥 API Health Report');
+  // Test Service Health
+  console.log('\n\n🏥 Service Health Report');
   console.log('='.repeat(60));
   
-  const health = CentralizedDataProvider.getApiHealth();
-  if (Object.keys(health).length === 0) {
-    console.log('No API calls recorded yet. Run some tests first.');
-  } else {
-    Object.entries(health).forEach(([api, stats]) => {
-      const status = stats.successRate > 80 ? '✅' : stats.successRate > 50 ? '🟡' : '❌';
-      console.log(`${status} ${api}:`);
-      console.log(`  Success Rate: ${stats.successRate.toFixed(1)}%`);
-      console.log(`  Calls: ${stats.calls}`);
-      console.log(`  Last Success: ${stats.lastSuccess ? new Date(stats.lastSuccess).toLocaleString() : 'Never'}`);
-      console.log(`  Last Failure: ${stats.lastFailure ? new Date(stats.lastFailure).toLocaleString() : 'Never'}`);
+  try {
+    const orchestrator = await createDataProviderOrchestrator();
+    const health = orchestrator.getServiceHealth();
+    
+    Object.entries(health).forEach(([service, stats]) => {
+      const status = stats.isHealthy ? '✅' : '❌';
+      console.log(`${status} ${service}:`);
+      console.log(`  Health: ${stats.isHealthy ? 'Healthy' : 'Unhealthy'}`);
+      console.log(`  Success Rate: ${(stats.successRate * 100).toFixed(1)}%`);
+      console.log(`  Total Requests: ${stats.totalRequests}`);
+      console.log(`  Failed Requests: ${stats.failedRequests}`);
+      console.log(`  Average Response Time: ${stats.averageResponseTime.toFixed(2)}ms`);
+      if (stats.lastError) {
+        console.log(`  Last Error: ${stats.lastError}`);
+      }
       console.log('');
     });
-  }
-  
-  // Test cache
-  console.log('💾 Cache Statistics');
-  console.log('='.repeat(60));
-  
-  const cacheStats = CentralizedDataProvider.getCacheStats();
-  console.log(`Cache Size: ${cacheStats.size} entries`);
-  if (cacheStats.entries.length > 0) {
-    console.log(`Cached Symbols: ${cacheStats.entries.join(', ')}`);
+    
+    // Test cache statistics
+    console.log('\n📊 Cache Statistics');
+    console.log('-'.repeat(30));
+    const cacheStats = await orchestrator.getCacheStats();
+    console.log(`Cache Size: ${cacheStats.size} entries`);
+    console.log(`Hit Rate: ${(cacheStats.hitRate * 100).toFixed(1)}%`);
+    console.log(`Miss Rate: ${(cacheStats.missRate * 100).toFixed(1)}%`);
+    console.log(`Total Requests: ${cacheStats.totalRequests}`);
+    
+    // Test rate limiting statistics
+    console.log('\n⏱️ Rate Limiting Statistics');
+    console.log('-'.repeat(30));
+    const rateLimitStats = orchestrator.getRateLimitStatus();
+    console.log(`Total Rate Limiters: ${rateLimitStats.totalLimiters}`);
+    console.log(`Total Queued Requests: ${rateLimitStats.totalQueuedRequests}`);
+    console.log(`Average Queue Length: ${rateLimitStats.averageQueueLength.toFixed(2)}`);
+    console.log(`Limiters At Capacity: ${rateLimitStats.limitersAtCapacity}`);
+    
+  } catch (error) {
+    console.error('❌ Failed to get service health:', error instanceof Error ? error.message : 'Unknown error');
   }
   
   console.log('\n🎉 Data Provider Test Complete!');
@@ -103,7 +119,9 @@ async function testIndividualAPIs() {
   // Test RapidAPI
   console.log('\n🔄 Testing RapidAPI Yahoo Finance...');
   try {
-    const data = await CentralizedDataProvider.getComprehensiveData(testSymbol);
+    const { createDataProviderOrchestrator } = await import('./src/lib/services');
+    const orchestrator = await createDataProviderOrchestrator();
+    const data = await orchestrator.getComprehensiveData(testSymbol);
     console.log(`✅ RapidAPI: ${data.marketData.source === 'rapidapi_yahoo' ? 'Working' : 'Not used'}`);
   } catch (error) {
     console.log('❌ RapidAPI: Failed');
@@ -112,7 +130,9 @@ async function testIndividualAPIs() {
   // Test Alpha Vantage
   console.log('\n🔄 Testing Alpha Vantage...');
   try {
-    const data = await CentralizedDataProvider.getComprehensiveData(testSymbol);
+    const { createDataProviderOrchestrator } = await import('./src/lib/services');
+    const orchestrator = await createDataProviderOrchestrator();
+    const data = await orchestrator.getComprehensiveData(testSymbol);
     console.log(`✅ Alpha Vantage: ${data.marketData.source === 'alpha_vantage' ? 'Working' : 'Not used'}`);
   } catch (error) {
     console.log('❌ Alpha Vantage: Failed');
@@ -121,7 +141,9 @@ async function testIndividualAPIs() {
   // Test Twelve Data
   console.log('\n🔄 Testing Twelve Data...');
   try {
-    const data = await CentralizedDataProvider.getComprehensiveData(testSymbol);
+    const { createDataProviderOrchestrator } = await import('./src/lib/services');
+    const orchestrator = await createDataProviderOrchestrator();
+    const data = await orchestrator.getComprehensiveData(testSymbol);
     console.log(`✅ Twelve Data: ${data.marketData.source === 'twelve_data' ? 'Working' : 'Not used'}`);
   } catch (error) {
     console.log('❌ Twelve Data: Failed');
@@ -130,7 +152,9 @@ async function testIndividualAPIs() {
   // Test CoinGecko
   console.log('\n🔄 Testing CoinGecko...');
   try {
-    const data = await CentralizedDataProvider.getComprehensiveData('BTC-USD');
+    const { createDataProviderOrchestrator } = await import('./src/lib/services');
+    const orchestrator = await createDataProviderOrchestrator();
+    const data = await orchestrator.getComprehensiveData('BTC-USD');
     console.log(`✅ CoinGecko: ${data.marketData.source === 'coingecko' ? 'Working' : 'Not used'}`);
   } catch (error) {
     console.log('❌ CoinGecko: Failed');
@@ -139,7 +163,9 @@ async function testIndividualAPIs() {
   // Test Scraper
   console.log('\n🔄 Testing Scraper...');
   try {
-    const data = await CentralizedDataProvider.getComprehensiveData(testSymbol);
+    const { createDataProviderOrchestrator } = await import('./src/lib/services');
+    const orchestrator = await createDataProviderOrchestrator();
+    const data = await orchestrator.getComprehensiveData(testSymbol);
     console.log(`✅ Scraper: ${data.marketData.source === 'scraper' ? 'Working' : 'Not used'}`);
   } catch (error) {
     console.log('❌ Scraper: Failed');

@@ -1,5 +1,4 @@
 import { BaseAgent } from './base-agent';
-import { CentralizedDataProvider } from '../centralized-data-provider';
 import { AgentInput, AgentOutput, SonarResearchData } from '../types/prediction-types';
 import { getBaseUrl } from '../utils';
 
@@ -19,8 +18,27 @@ export class SonarResearchAgent extends BaseAgent {
     // Get comprehensive data from centralized provider
     const centralizedData = await this.getCentralizedData(input.symbol);
     
-    // Transform centralized data into research format - no duplicate API calls
-    const researchData = this.transformCentralizedDataToResearchData(centralizedData);
+    // STRICT VALIDATION: Only proceed with real live data
+    if (!centralizedData || !centralizedData.marketData || !centralizedData.newsData) {
+      throw new Error(`[SonarResearchAgent] No live market/news data available for ${input.symbol}. Refusing to generate predictions without real data.`);
+    }
+    
+    // Validate data quality - must be real-time or recent cached
+    if (centralizedData.overallQuality !== 'realtime' && centralizedData.overallQuality !== 'cached') {
+      throw new Error(`[SonarResearchAgent] Data quality insufficient (${centralizedData.overallQuality}). Only real-time or recent cached data accepted.`);
+    }
+    
+    // Validate essential market and news data
+    if (typeof centralizedData.marketData.price !== 'number' || centralizedData.marketData.price <= 0) {
+      throw new Error(`[SonarResearchAgent] Invalid market price data for ${input.symbol}: ${centralizedData.marketData.price}`);
+    }
+    
+    if (!Array.isArray(centralizedData.newsData.articles) || centralizedData.newsData.articles.length === 0) {
+      throw new Error(`[SonarResearchAgent] No news articles available for ${input.symbol}. Cannot perform research without news data.`);
+    }
+    
+    // Transform centralized data into research format - with validated data only
+    const researchData = this.validateAndTransformCentralizedData(centralizedData);
     
     // 🏆 GOLD STANDARD: Enhanced financial domain expertise
     const marketContext = this.getMarketContext(input.symbol, centralizedData);
@@ -113,19 +131,23 @@ export class SonarResearchAgent extends BaseAgent {
         } catch (extractError) {
           console.error('[SonarResearchAgent] Failed to parse extracted JSON:', extractError);
           console.log('[SonarResearchAgent] Extracted JSON was:', extractedJSON);
-          data = this.getFallbackData();
+          throw new Error(`[SonarResearchAgent] Unable to parse LLM response for ${input.symbol}. Cannot generate prediction without valid analysis.`);
         }
       } else {
         console.error('[SonarResearchAgent] No valid JSON found in response');
         console.log('[SonarResearchAgent] Raw response content:', result.content.substring(0, 500) + '...');
-        data = this.getFallbackData();
+        throw new Error(`[SonarResearchAgent] LLM failed to provide valid analysis for ${input.symbol}. Cannot proceed without structured data.`);
       }
     }
     
-    // Defensive: ensure data is a proper object, not a number or array
+    // Strict validation: ensure data is a proper object with required fields
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
-      console.error('[SonarResearchAgent] Invalid data format, using fallback');
-      data = this.getFallbackData();
+      throw new Error(`[SonarResearchAgent] Invalid data format from LLM for ${input.symbol}. Expected object, got ${typeof data}`);
+    }
+    
+    // Validate required fields
+    if (!data.confidence || typeof data.confidence !== 'number' || data.confidence < 1 || data.confidence > 100) {
+      throw new Error(`[SonarResearchAgent] Invalid confidence score for ${input.symbol}: ${data.confidence}`);
     }
     
     // Defensive: filter sources to valid URLs or domain names
@@ -135,12 +157,7 @@ export class SonarResearchAgent extends BaseAgent {
       );
     }
     
-    const confidence = data.confidence || this.calculateConfidence({
-      dataQuality: 85,
-      signalStrength: 80,
-      sourceReliability: 90,
-      recency: 95
-    });
+    const confidence = data.confidence; // Use LLM confidence only, no fallback calculations
 
     // Create quality and validation metrics based on centralized data
     const qualityMetrics = this.createQualityMetrics(centralizedData);
@@ -165,7 +182,7 @@ export class SonarResearchAgent extends BaseAgent {
   }
 
 
-  private transformCentralizedDataToResearchData(centralizedData: any) {
+  private validateAndTransformCentralizedData(centralizedData: any) {
     // Transform comprehensive data from CentralizedDataProvider into research format
     const sentiment = this.analyzeSentiment(centralizedData);
     const marketData = centralizedData.marketData;
@@ -344,29 +361,5 @@ export class SonarResearchAgent extends BaseAgent {
     }
   }
 
-  private getFallbackData(): SonarResearchData {
-    return {
-      background: '',
-      filings: [],
-      news: [],
-      executives: [],
-      products: [],
-      sentiment: {
-        overall: 'neutral',
-        newsSentiment: 0.5,
-        socialSentiment: 0.5,
-        analystRating: 'hold'
-      },
-      geopolitical: {
-        economicFactors: ['Stable economic conditions'],
-        politicalRisks: ['Low political risk'],
-        socialTrends: ['Neutral social sentiment'],
-        globalImpact: 'neutral',
-        riskLevel: 'low'
-      },
-      keyEvents: [],
-      confidence: 50,
-      sources: []
-    };
-  }
+  // REMOVED: No fallback data - predictions must be based on live data and valid LLM analysis only
 }

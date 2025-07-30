@@ -17,13 +17,38 @@ export class GeoSentienceAgent extends BaseAgent {
     // Get centralized data for context
     const centralizedData = await this.getCentralizedData(input.symbol);
     
-    // Extract key data for analysis
+    // STRICT VALIDATION: Only proceed with real live data
+    if (!centralizedData || !centralizedData.marketData || !centralizedData.newsData) {
+      throw new Error(`[GeoSentienceAgent] No live market/news data available for ${input.symbol}. Refusing to generate predictions without real data.`);
+    }
+    
+    // Validate data quality - must be real-time or recent cached
+    if (centralizedData.overallQuality !== 'realtime' && centralizedData.overallQuality !== 'cached') {
+      throw new Error(`[GeoSentienceAgent] Data quality insufficient (${centralizedData.overallQuality}). Only real-time or recent cached data accepted.`);
+    }
+    
+    // Extract and validate key data for analysis
     const marketData = centralizedData.marketData;
     const newsData = centralizedData.newsData;
-    const priceChange = marketData?.changePercent || 0;
-    const volume = marketData?.volume || 0;
-    const newsCount = newsData?.articles?.length || 0;
-    const overallSentiment = newsData?.overallSentiment || 'neutral';
+    
+    // Validate essential market data
+    if (typeof marketData.price !== 'number' || marketData.price <= 0) {
+      throw new Error(`[GeoSentienceAgent] Invalid market price data for ${input.symbol}: ${marketData.price}`);
+    }
+    
+    if (typeof marketData.changePercent !== 'number') {
+      throw new Error(`[GeoSentienceAgent] Invalid price change data for ${input.symbol}`);
+    }
+    
+    // Validate news data
+    if (!Array.isArray(newsData.articles) || newsData.articles.length === 0) {
+      throw new Error(`[GeoSentienceAgent] No news articles available for ${input.symbol}. Cannot perform sentiment analysis without news data.`);
+    }
+    
+    const priceChange = marketData.changePercent;
+    const volume = marketData.volume || 0;
+    const newsCount = newsData.articles.length;
+    const overallSentiment = newsData.overallSentiment || 'neutral';
     
     const prompt = `
       Analyze ${input.symbol} for macro/geopolitical factors using real market data:
@@ -87,19 +112,23 @@ export class GeoSentienceAgent extends BaseAgent {
         } catch (extractError) {
           console.error('[GeoSentienceAgent] Failed to parse extracted JSON:', extractError);
           console.log('[GeoSentienceAgent] Extracted JSON was:', extractedJSON);
-          data = this.getFallbackData();
+          throw new Error(`[GeoSentienceAgent] Unable to parse LLM response for ${input.symbol}. Cannot generate prediction without valid analysis.`);
         }
       } else {
         console.error('[GeoSentienceAgent] No valid JSON found in response');
         console.log('[GeoSentienceAgent] Raw response content:', result.content.substring(0, 500) + '...');
-        data = this.getFallbackData();
+        throw new Error(`[GeoSentienceAgent] LLM failed to provide valid analysis for ${input.symbol}. Cannot proceed without structured data.`);
       }
     }
     
-    // Defensive: ensure data is a proper object, not a number or array
+    // Strict validation: ensure data is a proper object with required fields
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
-      console.error('[GeoSentienceAgent] Invalid data format, using fallback');
-      data = this.getFallbackData();
+      throw new Error(`[GeoSentienceAgent] Invalid data format from LLM for ${input.symbol}. Expected object, got ${typeof data}`);
+    }
+    
+    // Validate required fields
+    if (!data.confidence || typeof data.confidence !== 'number' || data.confidence < 1 || data.confidence > 100) {
+      throw new Error(`[GeoSentienceAgent] Invalid confidence score for ${input.symbol}: ${data.confidence}`);
     }
     
     // Flatten macroFactors if present
@@ -119,7 +148,7 @@ export class GeoSentienceAgent extends BaseAgent {
       symbol: input.symbol,
       timestamp: new Date().toISOString(),
       data: data,
-      confidence: data.confidence || this.calculateGeoConfidence(centralizedData),
+      confidence: data.confidence, // Use LLM confidence only, no fallback calculations
       sources: [...(data.sources || []), ...centralizedData.sources],
       processingTime: result.processingTime,
       quality: this.createQualityMetrics(centralizedData),
@@ -159,13 +188,5 @@ export class GeoSentienceAgent extends BaseAgent {
     return Math.min(100, strength);
   }
 
-  private getFallbackData(): GeoSentienceData {
-    return {
-      macroFactors: { economic: [], political: [], social: [] },
-      sentimentAnalysis: { twitter: { sentiment: 'neutral', score: 0 }, reddit: { sentiment: 'neutral', score: 0 }, news: { sentiment: 'neutral', score: 0 } },
-      riskAssessment: { level: 'medium', factors: [] },
-      confidence: 50,
-      sources: []
-    };
-  }
+  // REMOVED: No fallback data - predictions must be based on live data and valid LLM analysis only
 }
