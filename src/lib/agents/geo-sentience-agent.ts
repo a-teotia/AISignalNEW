@@ -24,7 +24,7 @@ export class GeoSentienceAgent extends BaseAgent {
     
     // Validate data quality - must be real-time or recent cached
     if (centralizedData.overallQuality !== 'realtime' && centralizedData.overallQuality !== 'cached') {
-      throw new Error(`[GeoSentienceAgent] Data quality insufficient (${centralizedData.overallQuality}). Only real-time or recent cached data accepted.`);
+      throw new Error(`[GeoSentienceAgent] Data quality insufficient (${centralizedData.overallQuality}). Trading signals require fresh data only (< 2 minutes old).`);
     }
     
     // Extract and validate key data for analysis

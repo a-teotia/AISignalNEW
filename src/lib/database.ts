@@ -74,9 +74,7 @@ class DatabaseManager {
         tp REAL,
         sl REAL,
         timeframe TEXT,
-        style TEXT,
-        -- Removed unique constraint to allow multiple predictions per symbol per day
-        -- UNIQUE(user_id, symbol, prediction_date)
+        style TEXT
       )
     `);
 

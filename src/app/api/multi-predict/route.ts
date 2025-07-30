@@ -5,20 +5,20 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
 export async function POST(req: Request) {
-  const { symbol, predictionDate, tradingStyle } = await req.json();
-
-  if (!symbol) {
-    return NextResponse.json({ error: 'Symbol is required' }, { status: 400 });
-  }
-
-  // Get user session
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  const user_id = session.user.email;
-
   try {
+    const { symbol, predictionDate, tradingStyle } = await req.json();
+
+    if (!symbol) {
+      return NextResponse.json({ error: 'Symbol is required' }, { status: 400 });
+    }
+
+    // Get user session
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const user_id = session.user.email;
+
     console.log(`🚀 Starting multi-agent prediction for ${symbol}`);
     
     const orchestrator = new AgentOrchestrator();

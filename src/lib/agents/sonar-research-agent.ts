@@ -23,9 +23,9 @@ export class SonarResearchAgent extends BaseAgent {
       throw new Error(`[SonarResearchAgent] No live market/news data available for ${input.symbol}. Refusing to generate predictions without real data.`);
     }
     
-    // Validate data quality - must be real-time or recent cached
+    // Validate data quality - STRICT: Only accept fresh data (< 2 minutes) for trading signals
     if (centralizedData.overallQuality !== 'realtime' && centralizedData.overallQuality !== 'cached') {
-      throw new Error(`[SonarResearchAgent] Data quality insufficient (${centralizedData.overallQuality}). Only real-time or recent cached data accepted.`);
+      throw new Error(`[SonarResearchAgent] Data quality insufficient (${centralizedData.overallQuality}). Trading signals require fresh data only (< 2 minutes old).`);
     }
     
     // Validate essential market and news data

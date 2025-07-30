@@ -13,20 +13,99 @@ import { SignalValidator } from './signal-validator';
 import { logAgentResult, logLargeObject } from '../utils';
 
 export class AgentOrchestrator {
-  private agents: BaseAgent[];
+  private allAgents: Record<string, BaseAgent>;
 
   constructor() {
-    this.agents = [
-      new SonarResearchAgent(),
-      new GeoSentienceAgent(),
-      new QuantEdgeAgent(),
-      new OnChainAgent(),
-      new FlowAgent(),
-      new MicrostructureAgent(),
-      new MLAgent(),
-      new MarketStructureAgent(),
-      new SynthOracleAgent()
+    this.allAgents = {
+      sonar: new SonarResearchAgent(),
+      geo: new GeoSentienceAgent(),
+      quant: new QuantEdgeAgent(),
+      onchain: new OnChainAgent(),
+      flow: new FlowAgent(),
+      microstructure: new MicrostructureAgent(),
+      ml: new MLAgent(),
+      marketstructure: new MarketStructureAgent(),
+      synth: new SynthOracleAgent()
+    };
+  }
+
+  private getAssetType(symbol: string): 'crypto' | 'stock' | 'forex' | 'commodity' {
+    const upperSymbol = symbol.toUpperCase();
+    
+    // Crypto patterns - more comprehensive
+    const cryptoPatterns = [
+      '-USD', '-USDT', '-BTC', '-ETH', // Common crypto pairs
+      'BTC', 'ETH', 'ADA', 'DOT', 'SOL', 'AVAX', 'MATIC', 'LINK', // Major cryptos
+      'DOGE', 'SHIB', 'UNI', 'AAVE', 'CRV', 'SUSHI', // Popular altcoins
     ];
+    
+    if (cryptoPatterns.some(pattern => upperSymbol.includes(pattern))) {
+      return 'crypto';
+    }
+    
+    // Forex patterns - 6 character pairs like EURUSD, GBPJPY
+    if (symbol.length === 6 && /^[A-Z]{6}$/.test(upperSymbol) && !upperSymbol.includes('.')) {
+      return 'forex';
+    }
+    
+    // Commodity patterns
+    const commodityPatterns = ['XAU', 'XAG', 'GOLD', 'SILVER', 'OIL', 'GAS', 'COPPER'];
+    if (commodityPatterns.some(commodity => upperSymbol.includes(commodity))) {
+      return 'commodity';
+    }
+    
+    // Default to stock for traditional symbols (AAPL, TSLA, etc.)
+    return 'stock';
+  }
+
+  private getApplicableAgents(symbol: string): BaseAgent[] {
+    const assetType = this.getAssetType(symbol);
+    
+    // Base agents that work for all asset types
+    const baseAgents = [
+      this.allAgents.sonar,      // News & sentiment
+      this.allAgents.geo,        // Geopolitical factors
+      this.allAgents.quant,      // Technical analysis
+      this.allAgents.ml,         // Machine learning
+      this.allAgents.synth       // Final synthesis
+    ];
+
+    // Add asset-specific agents
+    switch (assetType) {
+      case 'crypto':
+        return [
+          ...baseAgents.slice(0, -1), // All base agents except synth
+          this.allAgents.onchain,     // Blockchain data
+          this.allAgents.flow,        // Institutional flows
+          this.allAgents.synth        // Synthesis (always last)
+        ];
+      
+      case 'stock':
+        return [
+          ...baseAgents.slice(0, -1), // All base agents except synth
+          this.allAgents.flow,        // Institutional flows
+          this.allAgents.microstructure, // Market microstructure
+          this.allAgents.marketstructure, // Market structure
+          this.allAgents.synth        // Synthesis (always last)
+        ];
+      
+      case 'forex':
+        return [
+          ...baseAgents.slice(0, -1), // All base agents except synth
+          this.allAgents.flow,        // Institutional flows
+          this.allAgents.synth        // Synthesis (always last)
+        ];
+      
+      case 'commodity':
+        return [
+          ...baseAgents.slice(0, -1), // All base agents except synth
+          this.allAgents.flow,        // Institutional flows
+          this.allAgents.synth        // Synthesis (always last)
+        ];
+      
+      default:
+        return baseAgents;
+    }
   }
 
   async runMultiAgentAnalysis(symbol: string): Promise<MultiAgentOutput> {
@@ -34,25 +113,27 @@ export class AgentOrchestrator {
     const results: Record<string, AgentOutput> = {};
 
     try {
-      console.log(`🧠 Starting multi-agent analysis for ${symbol}...`);
+      const assetType = this.getAssetType(symbol);
+      console.log(`🧠 Starting multi-agent analysis for ${symbol} (${assetType})...`);
 
-      // Run all analysis agents in parallel
-      const agentPromises = [
-        this.agents[0].process({ symbol }), // SonarResearch
-        this.agents[1].process({ symbol }), // GeoSentience
-        this.agents[2].process({ symbol }), // QuantEdge
-        this.agents[3].process({ symbol }), // OnChain
-        this.agents[4].process({ symbol }), // Flow
-        this.agents[5].process({ symbol }), // Microstructure
-        this.agents[6].process({ symbol }), // ML
-        this.agents[7].process({ symbol })  // MarketStructure
-      ];
+      // Get applicable agents for this asset type
+      const applicableAgents = this.getApplicableAgents(symbol);
+      console.log(`📊 Using ${applicableAgents.length} agents for ${assetType} analysis`);
 
+      // Run analysis agents in parallel (excluding synth agent which runs last)
+      const analysisAgents = applicableAgents.filter(agent => 
+        !agent.constructor.name.includes('SynthOracleAgent')
+      );
+      
+      const agentPromises = analysisAgents.map(agent => agent.process({ symbol }));
       const agentResults = await Promise.all(agentPromises);
       
       // 🏆 GOLD STANDARD: Validate each agent result
       const validatedResults: Record<string, AgentOutput> = {};
-      const agentNames = ['sonar', 'geo', 'quant', 'onchain', 'flow', 'microstructure', 'ml', 'marketstructure'];
+      const agentNames = analysisAgents.map(agent => {
+        const className = agent.constructor.name;
+        return className.replace('Agent', '').toLowerCase();
+      });
       
       for (let i = 0; i < agentResults.length; i++) {
         const result = SignalValidator.validateAgentOutput(agentResults[i]);
@@ -93,14 +174,10 @@ export class AgentOrchestrator {
       console.log(`✅ Quality validation passed: ${highQualityAgents.length}/${Object.keys(validatedResults).length} agents meet quality threshold`);
 
       // Log each agent's result for debugging (with better formatting)
-      logAgentResult('SonarResearchAgent', validatedResults.sonar);
-      logAgentResult('GeoSentienceAgent', validatedResults.geo);
-      logAgentResult('QuantEdgeAgent', validatedResults.quant);
-      logAgentResult('OnChainAgent', validatedResults.onchain);
-      logAgentResult('FlowAgent', validatedResults.flow);
-      logAgentResult('MicrostructureAgent', validatedResults.microstructure);
-      logAgentResult('MLAgent', validatedResults.ml);
-      logAgentResult('MarketStructureAgent', validatedResults.marketstructure);
+      Object.entries(validatedResults).forEach(([agentName, result]) => {
+        const className = agentName.charAt(0).toUpperCase() + agentName.slice(1) + 'Agent';
+        logAgentResult(className, result);
+      });
 
       console.log('✅ All analysis agents completed and validated');
 
@@ -109,31 +186,46 @@ export class AgentOrchestrator {
       
       // Prepare context for synthesis agent - only include validated high-quality data
       const synthesisContext: any = {};
-      const contextKeys = ['sonarData', 'geoData', 'quantData', 'onchainData', 'flowData', 'microstructureData', 'mlData', 'marketStructureData'];
-      const agentKeys = ['sonar', 'geo', 'quant', 'onchain', 'flow', 'microstructure', 'ml', 'marketstructure'];
-      
       let includedAgents = 0;
       
-      for (let i = 0; i < contextKeys.length; i++) {
-        const contextKey = contextKeys[i];
-        const agentKey = agentKeys[i];
-        const agentResult = validatedResults[agentKey];
-        
-        // Only include data from agents with high confidence and quality
-        if (agentResult && agentResult.confidence > 0 && agentResult.quality.overallQuality >= qualityThreshold) {
+      // Map agent names to context keys
+      const agentToContextMap: Record<string, string> = {
+        'sonar': 'sonarData',
+        'geo': 'geoData', 
+        'quant': 'quantData',
+        'onchain': 'onchainData',
+        'flow': 'flowData',
+        'microstructure': 'microstructureData',
+        'ml': 'mlData',
+        'marketstructure': 'marketStructureData'
+      };
+      
+      // Only include data from applicable agents with high confidence and quality
+      Object.entries(validatedResults).forEach(([agentKey, agentResult]) => {
+        const contextKey = agentToContextMap[agentKey];
+        if (contextKey && agentResult.confidence > 0 && agentResult.quality.overallQuality >= qualityThreshold) {
           synthesisContext[contextKey] = agentResult.data;
           includedAgents++;
-        } else {
+        } else if (contextKey) {
           console.log(`❌ Excluding ${agentKey} data from synthesis (confidence: ${agentResult?.confidence || 0}, quality: ${agentResult?.quality?.overallQuality || 0})`);
           synthesisContext[contextKey] = null;
         }
-      }
+      });
       
       if (includedAgents < minimumRequiredAgents) {
         throw new Error(`Insufficient validated agents for synthesis of ${symbol}. Only ${includedAgents} agents passed quality/confidence checks. Minimum required: ${minimumRequiredAgents}.`);
       }
       
-      const synthResult = await this.agents[8].process({
+      // Find the synthesis agent from applicable agents
+      const synthAgent = applicableAgents.find(agent => 
+        agent.constructor.name.includes('SynthOracleAgent')
+      );
+      
+      if (!synthAgent) {
+        throw new Error('SynthOracleAgent not found in applicable agents');
+      }
+      
+      const synthResult = await synthAgent.process({
         symbol,
         context: synthesisContext
       });
@@ -750,18 +842,20 @@ export class AgentOrchestrator {
   }
 
   // Method to get individual agent results for debugging
-  async runSingleAgent(agentIndex: number, symbol: string): Promise<AgentOutput> {
-    if (agentIndex < 0 || agentIndex >= this.agents.length) {
-      throw new Error('Invalid agent index');
+  async runSingleAgent(agentName: string, symbol: string): Promise<AgentOutput> {
+    const agent = this.allAgents[agentName.toLowerCase()];
+    if (!agent) {
+      const availableAgents = Object.keys(this.allAgents).join(', ');
+      throw new Error(`Invalid agent name: ${agentName}. Available agents: ${availableAgents}`);
     }
     
-    const result = await this.agents[agentIndex].process({ symbol });
+    const result = await agent.process({ symbol });
     return SignalValidator.validateAgentOutput(result);
   }
 
   // Method to get agent status
   getAgentStatus(): Array<{ name: string; description: string }> {
-    return this.agents.map(agent => ({
+    return Object.values(this.allAgents).map(agent => ({
       name: agent.constructor.name,
       description: agent['config'].description
     }));

@@ -55,9 +55,9 @@ export class OnChainAgent extends BaseAgent {
       throw new Error(`[OnChainAgent] No live market data available for ${input.symbol}. Refusing to generate predictions without real data.`);
     }
     
-    // Validate data quality - must be real-time or recent cached
+    // Validate data quality - STRICT: Only accept fresh data (< 2 minutes) for trading signals
     if (centralizedData.overallQuality !== 'realtime' && centralizedData.overallQuality !== 'cached') {
-      throw new Error(`[OnChainAgent] Data quality insufficient (${centralizedData.overallQuality}). Only real-time or recent cached data accepted.`);
+      throw new Error(`[OnChainAgent] Data quality insufficient (${centralizedData.overallQuality}). Trading signals require fresh data only (< 2 minutes old).`);
     }
     
     // Get on-chain data from real APIs only - NO SYNTHETIC FALLBACKS

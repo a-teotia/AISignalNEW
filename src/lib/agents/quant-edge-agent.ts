@@ -31,7 +31,7 @@ export class QuantEdgeAgent extends BaseAgent {
     
     // Validate data quality - must be real-time or recent cached
     if (centralizedData.overallQuality !== 'realtime' && centralizedData.overallQuality !== 'cached') {
-      throw new Error(`[QuantEdgeAgent] Data quality insufficient (${centralizedData.overallQuality}). Only real-time or recent cached data accepted.`);
+      throw new Error(`[QuantEdgeAgent] Data quality insufficient (${centralizedData.overallQuality}). Trading signals require fresh data only (< 2 minutes old).`);
     }
     
     // Validate technical indicators are present

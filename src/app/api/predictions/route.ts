@@ -29,7 +29,10 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     console.error('Error fetching predictions:', error);
-    return NextResponse.json({ error: 'Failed to fetch predictions' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to fetch predictions', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }, { status: 500 });
   }
 }
 
