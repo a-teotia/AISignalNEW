@@ -586,16 +586,27 @@ export class YahooFinanceService implements IYahooFinanceService {
 
       const data = await response.json();
       
-      if (!data || !data.updates) {
-        throw new Error('Invalid recent updates data response');
+      // Handle various possible data structures
+      let updates = [];
+      if (data && data.updates && Array.isArray(data.updates)) {
+        updates = data.updates;
+      } else if (data && Array.isArray(data)) {
+        updates = data;
+      } else if (data && data.news && Array.isArray(data.news)) {
+        updates = data.news;
+      } else if (data && data.items && Array.isArray(data.items)) {
+        updates = data.items;
+      } else {
+        console.warn(`⚠️ Yahoo Finance news: Unexpected data structure for ${symbol}:`, data);
+        updates = []; // Use empty array as fallback
       }
 
-      const articles = data.updates.map((update: any) => ({
-        title: update.title || 'Recent Update',
-        source: update.source || 'Yahoo Finance',
-        sentiment: this.analyzeSentiment(update.title || '').sentiment,
-        impact: this.analyzeSentiment(update.title || '').impact,
-        timestamp: new Date().toISOString()
+      const articles = updates.slice(0, 10).map((update: any) => ({
+        title: update.title || update.headline || update.summary || 'Recent Update',
+        source: update.source || update.publisher || 'Yahoo Finance',
+        sentiment: this.analyzeSentiment(update.title || update.headline || '').sentiment,
+        impact: this.analyzeSentiment(update.title || update.headline || '').impact,
+        timestamp: update.timestamp || update.publishedAt || new Date().toISOString()
       }));
 
       const overallSentiment = this.calculateOverallSentiment(articles);
@@ -616,7 +627,33 @@ export class YahooFinanceService implements IYahooFinanceService {
         responseTime: 0
       };
     } catch (error) {
-      throw error;
+      console.warn(`⚠️ Yahoo Finance news failed for ${symbol}, using enhanced fallback`);
+      
+      // Return enhanced fallback data instead of throwing
+      return {
+        data: {
+          symbol,
+          articles: [
+            {
+              title: `${symbol} Market Analysis - Data Unavailable`,
+              source: 'Yahoo Finance Fallback',
+              sentiment: 'neutral' as 'bullish' | 'bearish' | 'neutral',
+              impact: 0.5,
+              timestamp: new Date().toISOString()
+            }
+          ],
+          overallSentiment: 'neutral',
+          sentimentScore: 0.5,
+          timestamp: new Date().toISOString(),
+          source: 'yahoo_recent_updates_fallback',
+          quality: 'none'
+        },
+        success: false,
+        source: 'yahoo_recent_updates_fallback',
+        quality: 'none',
+        responseTime: 0,
+        error: error instanceof Error ? error.message : 'Yahoo Finance news service unavailable'
+      };
     }
   }
 

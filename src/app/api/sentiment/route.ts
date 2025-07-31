@@ -31,7 +31,7 @@ export async function POST(req: Request) {
         prediction_date: predictionDate || new Date().toISOString().split('T')[0],
         verdict: result.finalVerdict.direction === 'BUY' ? 'UP' : result.finalVerdict.direction === 'SELL' ? 'DOWN' : 'NEUTRAL',
         confidence: result.finalVerdict.confidence,
-        reasoning: result.finalVerdict.reasoning,
+        reasoning: result.finalVerdict.reasoning || 'No reasoning available',
         market_context: JSON.stringify({
           type: 'sequential_analysis',
           executiveSummary: result.executiveSummary,
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
           id: predictionId,
           verdict: result.finalVerdict.direction === 'BUY' ? 'UP' : result.finalVerdict.direction === 'SELL' ? 'DOWN' : 'NEUTRAL',
           confidence: result.finalVerdict.confidence,
-          reasoning: result.finalVerdict.reasoning
+          reasoning: result.finalVerdict.reasoning || 'No reasoning available'
         },
         sequentialAnalysis: {
           priceTarget: result.finalVerdict.priceTarget,

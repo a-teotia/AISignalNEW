@@ -9,11 +9,9 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { Progress } from "@/components/ui/progress";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
-import { AgentResults } from "@/components/AgentResults";
-import { MultiAgentOutput } from "@/lib/types/prediction-types";
-import { DynamicLoadingPrompt } from "@/components/DynamicLoadingPrompt";
+import SequentialAnalysisCard from "@/components/SequentialAnalysisCard";
 import { useSession } from "next-auth/react";
-import { X, TrendingUp, TrendingDown, Minus, Activity, Target, BarChart3, Clock, DollarSign, Shield, Zap, Users, Settings, Loader2 } from "lucide-react";
+import { X, TrendingUp, TrendingDown, Minus, Activity, Target, BarChart3, Clock, DollarSign, Shield, Zap, Users, Settings, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 
 // Trading style presets
 const tradingStyles = [
@@ -115,12 +113,13 @@ export default function Dashboard() {
   const [selectedTradingStyle, setSelectedTradingStyle] = useState('swing');
   const [selectedAssetCategory, setSelectedAssetCategory] = useState('crypto');
   
-  // State for agent breakdown and recent signals
-  const [agentBreakdown, setAgentBreakdown] = useState(defaultAgentBreakdown);
-  // Live signal feed state
-  const [recentSignals, setRecentSignals] = useState<any[]>([]);
-  const [signalPage, setSignalPage] = useState(1);
-  const [signalTotalPages, setSignalTotalPages] = useState(1);
+  // Sequential analysis state
+  const [sequentialAnalysisResult, setSequentialAnalysisResult] = useState<any>(null);
+  const [recentAnalyses, setRecentAnalyses] = useState<any[]>([]);
+  
+  // Pagination state for recent analyses
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(3); // Show 3 analyses per page
 
   // Load performance metrics on symbol change
   useEffect(() => {
@@ -146,227 +145,49 @@ export default function Dashboard() {
     }
   };
 
-  // Fetch live signals from backend (paginated)
-  const fetchSignals = async (page = 1) => {
+  // Fetch recent sequential analyses
+  const fetchRecentAnalyses = async () => {
     try {
-      const res = await fetch(`/api/predictions?page=${page}&pageSize=10`);
+      const res = await fetch('/api/sequential-analysis');
       const data = await res.json();
-      if (data && data.predictions) {
-        setRecentSignals(data.predictions.map((p: any) => ({
-          id: `db-${p.id}`, // Prefix database IDs to avoid conflicts
-          symbol: p.symbol,
-          direction: p.verdict,
-          confidence: p.confidence,
-          entry: p.entry || 0,
-          tp: p.tp || 0,
-          sl: p.sl || 0,
-          timeframe: p.timeframe || '1H',
-          style: p.style || 'swing',
-          agents: [], // Could parse from p.market_context if needed
-          reasoning: p.reasoning,
-          timestamp: p.created_at,
-          status: 'active', // Could infer from DB fields
-          predictionId: p.id // Keep original DB ID for reference
-        })));
-        setSignalPage(data.page);
-        setSignalTotalPages(data.totalPages);
+      if (data.success && data.analysisHistory) {
+        setRecentAnalyses(data.analysisHistory);
       }
     } catch (err) {
-      console.error('Failed to fetch signals:', err);
+      console.error('Failed to fetch recent analyses:', err);
     }
   };
 
-  // On mount, load first page of signals
+  // Handle sequential analysis completion
+  const handleSequentialAnalysisComplete = (result: any) => {
+    console.log('Sequential analysis completed:', result);
+    setSequentialAnalysisResult(result);
+    
+    // Update the recent analyses list
+    const newAnalysis = {
+      id: Date.now(),
+      symbol: result.symbol,
+      timestamp: result.timestamp,
+      verdict: result.finalVerdict.direction,
+      confidence: result.finalVerdict.confidence,
+      priceTarget: result.finalVerdict.priceTarget,
+      reasoning: result.finalVerdict.reasoning,
+      agentChain: result.agentChain
+    };
+    
+    setRecentAnalyses(prev => [newAnalysis, ...prev.slice(0, 9)]); // Keep last 10
+    setCurrentPage(1); // Reset to first page to show latest analysis
+    
+    // Reload performance metrics
+    setTimeout(loadPerformanceMetrics, 1000);
+  };
+
+  // On mount, load recent analyses
   useEffect(() => {
-    fetchSignals(1);
+    fetchRecentAnalyses();
   }, []);
 
-  const handleAnalyze = async () => {
-    setLoading(true);
-    console.log("Symbol:", symbol);
-    console.log("Date:", selectedDate);
-    console.log("Session:", session);
-
-    // Check if user is authenticated
-    if (!session || !session.user) {
-      alert("Please sign in to generate signals.");
-      setLoading(false);
-      return;
-    }
-
-    const today = new Date().toISOString().split("T")[0];
-    if (selectedDate > today) {
-      alert("Please select a date that is today or earlier.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      console.log("🔄 Starting analysis for:", symbol);
-      
-      // Use the centralized data provider for comprehensive data
-      const dataResponse = await fetch(`/api/market-data?symbol=${symbol}`);
-      const marketData = await dataResponse.json();
-      
-      console.log("Market data response:", marketData);
-      
-      if (marketData.success) {
-        console.log("Market data received:", marketData.data);
-        
-        // Generate AI prediction using the multi-agent system
-        const predictionResponse = await fetch("/api/multi-predict", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            symbol, 
-            predictionDate: selectedDate || new Date().toISOString().split('T')[0],
-            tradingStyle: selectedTradingStyle
-          }),
-        });
-        
-        if (!predictionResponse.ok) {
-          const errorText = await predictionResponse.text();
-          console.error("❌ API Error:", predictionResponse.status, errorText);
-          throw new Error(`API Error: ${predictionResponse.status} - ${errorText}`);
-        }
-        
-        const predictionData = await predictionResponse.json();
-        console.log("Prediction data:", predictionData);
-        
-        // Debug: Check if we have the expected structure
-        if (predictionData.result) {
-          console.log("✅ Multi-agent result structure:", {
-            hasAgents: !!predictionData.result.agents,
-            agentCount: predictionData.result.agents ? Object.keys(predictionData.result.agents).length : 0,
-            finalPrediction: predictionData.result.finalPrediction,
-            confidence: predictionData.result.confidence
-          });
-        }
-
-        if (predictionData.success && predictionData.result) {
-          const result = predictionData.result;
-          const finalPrediction = result.finalPrediction;
-          
-          // Update state with real prediction data
-          setConfidence(result.confidence || 50);
-          setVerdict(finalPrediction.direction === 'UP' ? 'UP 📈' : 
-                    finalPrediction.direction === 'DOWN' ? 'DOWN 📉' : 'NEUTRAL ➡️');
-          setReason(finalPrediction.reasoning || 'Multi-agent AI analysis completed');
-          setPredictionId(predictionData.predictionId);
-          
-          // Update agent breakdown with real data from all agents
-          if (result.agents) {
-            // Transform agent results for the pie chart
-            const realAgentBreakdown = Object.entries(result.agents).map(([agentName, agentResult]: [string, any]) => ({
-              name: agentName.charAt(0).toUpperCase() + agentName.slice(1) + ' Agent',
-              value: agentResult.confidence || 50,
-              color: getAgentColor(agentName)
-            }));
-            
-            // Update the agent breakdown state with real data
-            setAgentBreakdown(realAgentBreakdown);
-          }
-          
-          // Add the new signal to the live feed
-          const timestamp = new Date().toISOString();
-          const newSignal = {
-            id: `${symbol}-${timestamp}-${Math.random().toString(36).substr(2, 9)}`, // More unique ID
-            symbol: symbol,
-            direction: finalPrediction.direction,
-            confidence: result.confidence || 50,
-            entry: marketData.data?.price || 0,
-            tp: calculateTakeProfit(marketData.data?.price || 0, finalPrediction.direction),
-            sl: calculateStopLoss(marketData.data?.price || 0, finalPrediction.direction),
-            timeframe: getTimeframeForStyle(selectedTradingStyle),
-            style: selectedTradingStyle,
-            agents: result.agents ? Object.keys(result.agents) : ['AI System'],
-            reasoning: finalPrediction.reasoning || 'Multi-agent AI analysis completed',
-            timestamp: timestamp,
-            status: 'active',
-            predictionId: predictionData.predictionId // Add database ID for tracking
-          };
-          
-          // Add to the beginning of the signals array
-          setRecentSignals(prev => [newSignal, ...prev]);
-          
-          console.log("✅ Signal generated successfully:", newSignal);
-          
-          // Show success notification
-          // alert(`✅ Signal generated for ${symbol}!\nDirection: ${finalPrediction.direction}\nConfidence: ${result.confidence || 50}%\nTrading Style: ${selectedTradingStyle}`);
-        } else {
-          console.error("❌ Invalid response structure:", predictionData);
-          throw new Error("Invalid response structure from multi-predict API");
-        }
-      } else {
-        throw new Error("Failed to fetch market data");
-      }
-    } catch (error) {
-      console.error("Error generating signal:", error);
-      alert("Failed to generate signal. Please try again.");
-    }
-
-    setLoading(false);
-    // Reload performance metrics after new prediction
-    setTimeout(loadPerformanceMetrics, 1000);
-    // After new analysis, re-fetch signals from backend
-    fetchSignals(1);
-  };
-
-  // Add Deep Analysis handler
-  const handleDeepAnalysis = async () => {
-    setLoading(true);
-    try {
-      // Fetch real-time data for the selected symbol
-      const dataResponse = await fetch(`/api/market-data?symbol=${symbol}`);
-      const marketData = await dataResponse.json();
-      if (!marketData.success) throw new Error('Failed to fetch market data');
-
-      // Prepare realTimeData for VortexForge
-      const realTimeData = {
-        currentPrice: marketData.data?.price || 0,
-        indicators: marketData.data?.indicators || {},
-        support: marketData.data?.support || '',
-        resistance: marketData.data?.resistance || '',
-        style: selectedTradingStyle
-      };
-      const timeframe = getTimeframeForStyle(selectedTradingStyle);
-
-      // Call VortexForge API
-      const response = await fetch('/api/vortexforge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol, timeframe, realTimeData })
-      });
-      if (!response.ok) throw new Error('VortexForge API error');
-      const { result } = await response.json();
-
-      // Add the new VortexForge signal to the top of the feed
-      const timestamp = new Date().toISOString();
-      const newSignal = {
-        id: `${symbol}-${timestamp}-${Math.random().toString(36).substr(2, 9)}`, // More unique ID
-        symbol,
-        direction: result.data.direction,
-        confidence: result.confidence,
-        entry: result.data.entry,
-        tp: result.data.takeProfit,
-        sl: result.data.stopLoss,
-        timeframe: result.data.timeframe || timeframe,
-        style: selectedTradingStyle,
-        agents: ['VortexForge'],
-        reasoning: result.data.reasoning,
-        timestamp: timestamp,
-        status: 'active',
-        agent: 'VortexForge',
-        data: result.data // for modal details
-      };
-      setRecentSignals(prev => [newSignal, ...prev]);
-    } catch (err) {
-      // TODO: Show user-friendly error message
-      alert('Failed to run Deep Analysis. Please try again.');
-      console.error(err);
-    }
-    setLoading(false);
-  };
+  // All analysis functions are now handled by SequentialAnalysisCard component
 
   const getDirectionIcon = (direction: string) => {
     switch (direction) {
@@ -382,6 +203,28 @@ export default function Dashboard() {
       case 'DOWN': return 'text-red-400';
       default: return 'text-gray-400';
     }
+  };
+
+  // Calculate pagination for recent analyses
+  const totalPages = Math.ceil(recentAnalyses.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentAnalyses = recentAnalyses.slice(startIndex, endIndex);
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
   };
 
   const getStatusColor = (status: string) => {
@@ -653,90 +496,155 @@ export default function Dashboard() {
             </Card>
           </motion.div>
 
-          {/* Live Signal Feed */}
+          {/* Sequential Analysis Section */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.5 }}
           >
+            <SequentialAnalysisCard 
+              symbol={symbol} 
+              onAnalysisComplete={handleSequentialAnalysisComplete}
+            />
+          </motion.div>
+
+          {/* Recent Sequential Analyses */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+          >
             <Card className="trading-card border-0">
               <CardHeader>
-                <CardTitle className="text-white flex items-center text-xl">
-                  <Activity className="w-6 h-6 mr-3 text-primary animate-pulse" />
-                  Live Signal Feed
-                </CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  Real-time AI-generated trading signals with full transparency
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-white flex items-center text-xl">
+                      <Activity className="w-6 h-6 mr-3 text-primary animate-pulse" />
+                      Recent Sequential Analyses
+                    </CardTitle>
+                    <CardDescription className="text-muted-foreground">
+                      Your recent 5-agent sequential analysis results with citations
+                    </CardDescription>
+                  </div>
+                  {recentAnalyses.length > itemsPerPage && (
+                    <div className="text-sm text-muted-foreground">
+                      {startIndex + 1}-{Math.min(endIndex, recentAnalyses.length)} of {recentAnalyses.length}
+                    </div>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentSignals.map((signal: any, index) => (
-                    <motion.div
-                      key={signal.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.5, delay: index * 0.1 }}
-                      className="glassmorphism rounded-xl p-6 hover:border-primary/30 transition-all duration-300 group"
-                    >
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center space-x-4">
-                          <div className="p-2 rounded-lg bg-primary/10">
-                            {getDirectionIcon(signal.direction)}
+                  {recentAnalyses.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">No recent analyses yet. Run your first sequential analysis above!</p>
+                    </div>
+                  ) : (
+                    currentAnalyses.map((analysis: any, index) => (
+                      <motion.div
+                        key={analysis.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.5, delay: index * 0.1 }}
+                        className="glassmorphism rounded-xl p-6 hover:border-primary/30 transition-all duration-300 group"
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center space-x-4">
+                            <div className="p-2 rounded-lg bg-primary/10">
+                              {getDirectionIcon(analysis.verdict)}
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-white text-lg">{analysis.symbol}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {analysis.agentChain?.join(' → ') || '5-Agent Analysis'}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="font-bold text-white text-lg">{signal.symbol}</h3>
-                            <p className="text-sm text-muted-foreground">{signal.timeframe} • {signal.style}</p>
+                          <div className="text-right">
+                            <div className={`text-xl font-bold ${getDirectionColor(analysis.verdict)} group-hover:scale-110 transition-transform`}>
+                              {analysis.verdict}
+                            </div>
+                            <div className="text-sm text-muted-foreground">{analysis.confidence}% confidence</div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className={`text-xl font-bold ${getDirectionColor(signal.direction)} group-hover:scale-110 transition-transform`}>
-                            {signal.direction}
-                          </div>
-                          <div className="text-sm text-muted-foreground">{signal.confidence}% confidence</div>
-                        </div>
-                      </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div className="bg-card/50 rounded-xl p-4 border border-border/50">
-                          <p className="text-xs text-muted-foreground mb-1">Entry</p>
-                          <p className="font-bold text-white text-lg">${signal.entry}</p>
+                        <div className="mb-4">
+                          <div className="bg-card/50 rounded-xl p-4 border border-border/50">
+                            <p className="text-xs text-muted-foreground mb-2">Analysis Summary</p>
+                            <p className="text-white text-sm line-clamp-2">{analysis.reasoning}</p>
+                          </div>
                         </div>
-                        <div className="bg-green-500/10 rounded-xl p-4 border border-green-500/20">
-                          <p className="text-xs text-green-400 mb-1">Take Profit</p>
-                          <p className="font-bold text-green-400 text-lg">${signal.tp}</p>
-                        </div>
-                        <div className="bg-red-500/10 rounded-xl p-4 border border-red-500/20">
-                          <p className="text-xs text-red-400 mb-1">Stop Loss</p>
-                          <p className="font-bold text-red-400 text-lg">${signal.sl}</p>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(signal.status)}`}>
-                            {signal.status}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(signal.timestamp).toLocaleTimeString()}
-                          </span>
+                        {analysis.priceTarget && (
+                          <div className="mb-4">
+                            <div className="bg-primary/10 rounded-xl p-4 border border-primary/20">
+                              <p className="text-xs text-primary mb-1">Price Target</p>
+                              <p className="font-bold text-primary text-lg">${analysis.priceTarget}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-500/20 text-green-400 border-green-500/30">
+                              Sequential Analysis
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(analysis.timestamp).toLocaleString()}
+                            </span>
+                          </div>
+                          <Button size="sm" variant="outline" className="border-primary/30 text-primary hover:bg-primary/10 rounded-xl">
+                            View Full Report
+                          </Button>
                         </div>
-                        <Button size="sm" variant="outline" className="border-primary/30 text-primary hover:bg-primary/10 rounded-xl">
-                          View Details
-                        </Button>
+                      </motion.div>
+                    ))
+                  )}
+                  
+                  {/* Pagination Controls */}
+                  {recentAnalyses.length > itemsPerPage && (
+                    <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4 mt-6 pt-4 border-t border-border/50">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={goToPrevPage}
+                        disabled={currentPage === 1}
+                        className="border-primary/30 text-primary hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-1" />
+                        Previous
+                      </Button>
+                      
+                      <div className="flex items-center space-x-2">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <Button
+                            key={page}
+                            variant={page === currentPage ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => goToPage(page)}
+                            className={`w-10 h-10 ${
+                              page === currentPage 
+                                ? 'bg-primary text-white' 
+                                : 'border-primary/30 text-primary hover:bg-primary/10'
+                            }`}
+                          >
+                            {page}
+                          </Button>
+                        ))}
                       </div>
-                    </motion.div>
-                  ))}
-                  {/* Pagination controls */}
-                  <div className="flex justify-center mt-6 space-x-3">
-                    <Button size="sm" variant="outline" className="border-primary/30 text-primary rounded-xl" disabled={signalPage === 1} onClick={() => fetchSignals(signalPage - 1)}>
-                      Previous
-                    </Button>
-                    <span className="text-muted-foreground px-4 py-2">Page {signalPage} of {signalTotalPages}</span>
-                    <Button size="sm" variant="outline" className="border-primary/30 text-primary rounded-xl" disabled={signalPage === signalTotalPages} onClick={() => fetchSignals(signalPage + 1)}>
-                      Next
-                    </Button>
-                  </div>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={goToNextPage}
+                        disabled={currentPage === totalPages}
+                        className="border-primary/30 text-primary hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                      >
+                        Next
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -749,55 +657,74 @@ export default function Dashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
           >
-            {/* Agent Breakdown */}
+            {/* Sequential Agent Chain */}
             <Card className="trading-card border-0">
               <CardHeader>
                 <CardTitle className="text-white flex items-center text-xl">
                   <Users className="w-6 h-6 mr-3 text-primary" />
-                  Agent Breakdown
+                  Sequential Agent Chain
                 </CardTitle>
                 <CardDescription className="text-muted-foreground">
-                  See which AI agents contributed to the latest signal
+                  5-agent sequential analysis with compound intelligence
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                         data={agentBreakdown}
-                         cx="50%"
-                         cy="50%"
-                         innerRadius={60}
-                         outerRadius={100}
-                         paddingAngle={5}
-                         dataKey="value"
-                       >
-                         {agentBreakdown.map((entry: any, index: number) => (
-                           <Cell key={`cell-${index}`} fill={entry.color} />
-                         ))}
-                       </Pie>
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'rgba(17, 17, 19, 0.95)', 
-                          border: '1px solid rgba(59, 130, 246, 0.3)',
-                          borderRadius: '12px',
-                          color: 'white',
-                          backdropFilter: 'blur(20px)'
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                <div className="space-y-4">
+                  {sequentialAnalysisResult ? (
+                    // Show actual agent chain from latest analysis
+                    <div className="space-y-3">
+                      {sequentialAnalysisResult.agentChain?.map((agent: string, index: number) => (
+                        <div key={agent} className="flex items-center space-x-4 p-4 rounded-xl bg-card/30 border border-border/50">
+                          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
+                            {index + 1}
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-white font-semibold">{agent}</h4>
+                            <p className="text-xs text-muted-foreground">
+                              {index === 0 && "Real market data analysis"}
+                              {index === 1 && "Internet research & fundamentals"}
+                              {index === 2 && "Technical analysis integration"}
+                              {index === 3 && "Sentiment & news analysis"}
+                              {index === 4 && "Final synthesis & report"}
+                            </p>
+                          </div>
+                          <div className="text-primary">
+                            {index < sequentialAnalysisResult.agentChain.length - 1 && "→"}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    // Show default sequential agent chain
+                    <div className="space-y-3">
+                      {[
+                        { name: "Quantitative Analysis", desc: "Real market data & technical indicators" },
+                        { name: "Market Analysis", desc: "Internet research & fundamentals" },
+                        { name: "Technical Analysis", desc: "Chart patterns & signals" },
+                        { name: "Sentiment Analysis", desc: "News & social sentiment" },
+                        { name: "Final Synthesis", desc: "Comprehensive report with citations" }
+                      ].map((agent, index) => (
+                        <div key={agent.name} className="flex items-center space-x-4 p-4 rounded-xl bg-card/30 border border-border/50">
+                          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
+                            {index + 1}
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-white font-semibold">{agent.name}</h4>
+                            <p className="text-xs text-muted-foreground">{agent.desc}</p>
+                          </div>
+                          <div className="text-primary">
+                            {index < 4 && "→"}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="grid grid-cols-2 gap-3 mt-6">
-                   {agentBreakdown.map((agent: any) => (
-                     <div key={agent.name} className="flex items-center space-x-3 p-2 rounded-lg bg-card/30">
-                       <div className="w-4 h-4 rounded-full" style={{ backgroundColor: agent.color }}></div>
-                       <span className="text-sm text-white flex-1">{agent.name}</span>
-                       <span className="text-sm font-bold text-primary">{agent.value}%</span>
-                     </div>
-                   ))}
-                 </div>
+                
+                <div className="mt-6 p-4 rounded-xl bg-primary/10 border border-primary/20">
+                  <h4 className="text-primary font-semibold mb-2">Why Sequential Analysis?</h4>
+                  <p className="text-sm text-white">Each agent builds on the previous one's insights, creating compound intelligence and higher accuracy than parallel processing.</p>
+                </div>
               </CardContent>
             </Card>
 
@@ -850,74 +777,7 @@ export default function Dashboard() {
             </Card>
           </motion.div>
 
-          {/* Quick Analysis Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.7 }}
-          >
-            <Card className="trading-card border-0">
-              <CardHeader>
-                <CardTitle className="text-white text-xl flex items-center">
-                  <Zap className="w-6 h-6 mr-3 text-primary" />
-                  Quick Analysis
-                </CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  Generate a new AI prediction for any asset
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col md:flex-row gap-4">
-                  <Input
-                    type="date"
-                    value={selectedDate}
-                    max={new Date().toISOString().split("T")[0]}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="flex-1 bg-card border-border text-white placeholder:text-muted-foreground focus:border-primary rounded-xl"
-                    placeholder="Select Date"
-                  />
-                  <Button 
-                    onClick={handleAnalyze} 
-                    disabled={loading}
-                    className="bg-primary text-white hover:bg-primary/90 font-semibold rounded-xl px-6 py-3 shadow-lg hover:shadow-primary/25 transition-all duration-300"
-                  >
-                    {loading ? "Analyzing..." : "Generate Signal"}
-                  </Button>
-                  <Button
-                    onClick={handleDeepAnalysis}
-                    disabled={loading}
-                    className="bg-gradient-to-r from-primary to-blue-600 text-white hover:from-primary/90 hover:to-blue-600/90 font-semibold rounded-xl px-6 py-3 shadow-lg hover:shadow-primary/25 transition-all duration-300"
-                  >
-                    {loading ? (
-                      <Loader2 className="animate-spin w-5 h-5 mr-2" />
-                    ) : (
-                      <Zap className="w-5 h-5 mr-2" />
-                    )}
-                    Deep Analysis
-                  </Button>
-                  <Button 
-                    onClick={async () => {
-                      try {
-                        console.debug("Sending to n8n webhook:", { symbol });
-                        const response = await fetch("https://ateotia-dev.app.n8n.cloud/webhook-test/d80b79e2-9ad0-4966-8724-ef8d8bb263c1", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ symbol })
-                        });
-                        const data = await response.json();
-                        console.log("n8n Analysis response:", data);
-                      } catch (error) {
-                        console.error("n8n Analysis error:", error);
-                      }
-                    }}
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-500/90 hover:to-emerald-600/90 font-semibold rounded-xl px-6 py-3 shadow-lg hover:shadow-green-500/25 transition-all duration-300"
-                  >
-                    n8n Analysis
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+          {/* Sequential Analysis is now handled above in the SequentialAnalysisCard */}
         </div>
       </div>
     </div>

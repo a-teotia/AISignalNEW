@@ -124,14 +124,14 @@ const SequentialAnalysisCard: React.FC<SequentialAnalysisCardProps> = ({
   };
 
   return (
-    <Card className="p-6 bg-black/50 border-gold/20 backdrop-blur-sm">
+    <Card className="p-6 trading-card border-0">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-white">
             Sequential AI Analysis
           </h2>
-          <Badge variant="outline" className="text-gold border-gold">
+          <Badge variant="outline" className="text-primary border-primary">
             {symbol}
           </Badge>
         </div>
@@ -140,17 +140,24 @@ const SequentialAnalysisCard: React.FC<SequentialAnalysisCardProps> = ({
         <Button
           onClick={runSequentialAnalysis}
           disabled={isAnalyzing || !symbol}
-          className="w-full bg-gold text-black hover:bg-gold/90 disabled:opacity-50"
+          className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-primary/25 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isAnalyzing ? 'Analyzing...' : 'Run Sequential Analysis'}
+          {isAnalyzing ? (
+            <div className="flex items-center space-x-2">
+              <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+              <span>Analyzing...</span>
+            </div>
+          ) : (
+            'Run Sequential Analysis'
+          )}
         </Button>
 
         {/* Progress Indicator */}
         {isAnalyzing && (
-          <div className="bg-gray-900/50 p-4 rounded-lg border border-gold/20">
+          <div className="bg-gray-900/50 p-4 rounded-lg border border-primary/20">
             <div className="flex items-center space-x-3">
-              <div className="animate-spin w-4 h-4 border-2 border-gold border-t-transparent rounded-full"></div>
-              <span className="text-gold font-medium">{currentAgent}</span>
+              <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full"></div>
+              <span className="text-primary font-medium">{currentAgent}</span>
             </div>
           </div>
         )}

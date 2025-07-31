@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { LivePerformanceTracker } from '../../../lib/testing/live-performance-tracker';
+// TEMPORARILY DISABLED - NEEDS UPDATE FOR SEQUENTIAL SYSTEM
+// import { LivePerformanceTracker } from '../../../lib/testing/live-performance-tracker';
 
-let tracker: LivePerformanceTracker | null = null;
+// let tracker: LivePerformanceTracker | null = null;
 
 export async function POST(request: NextRequest) {
-  try {
+  return NextResponse.json({ 
+    error: 'Live tracking temporarily disabled - needs sequential system update' 
+  }, { status: 503 });
+  
+  /* try {
     const body = await request.json();
     const { action, symbols, intervalMinutes } = body;
 
@@ -78,10 +83,15 @@ export async function POST(request: NextRequest) {
     console.error('Live tracking API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+  */
 }
 
 export async function GET() {
-  try {
+  return NextResponse.json({ 
+    error: 'Live tracking temporarily disabled - needs sequential system update' 
+  }, { status: 503 });
+  
+  /* try {
     const isActive = tracker !== null;
     const metrics = tracker ? tracker.getMetrics() : null;
     const predictions = tracker ? tracker.getPredictions() : [];
@@ -98,4 +108,5 @@ export async function GET() {
     console.error('Live tracking GET error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+  */
 } 

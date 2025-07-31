@@ -25,50 +25,42 @@ import {
 
 const agents = [
   { 
-    name: "Quant Edge Agent", 
-    label: "Technical", 
+    name: "Quantitative Analysis", 
+    label: "Agent 1", 
     icon: BarChart3, 
-    desc: "Advanced quantitative models for market prediction and risk analysis.",
+    desc: "Real market data, technical indicators, volume analysis, and risk metrics with Yahoo Finance integration.",
     color: "text-purple-400",
     bgColor: "bg-purple-500/10"
   },
   { 
-    name: "Sonar Research Agent", 
-    label: "Sentiment", 
+    name: "Market Analysis", 
+    label: "Agent 2", 
     icon: Globe, 
-    desc: "Real-time news, sentiment, and deep web research for actionable insights.",
+    desc: "Internet research on company fundamentals, earnings, competitive position using Perplexity Sonar.",
     color: "text-blue-400",
     bgColor: "bg-blue-500/10"
   },
   { 
-    name: "Geo Sentience Agent", 
-    label: "Macro", 
-    icon: Globe, 
-    desc: "Geospatial and macroeconomic data for global market context.",
+    name: "Technical Analysis", 
+    label: "Agent 3", 
+    icon: TrendingUp, 
+    desc: "Chart patterns, support/resistance levels building on quantitative and fundamental insights.",
     color: "text-green-400",
     bgColor: "bg-green-500/10"
   },
   { 
-    name: "Microstructure Agent", 
-    label: "Microstructure", 
-    icon: Target, 
-    desc: "Order flow, liquidity, and market microstructure analytics.",
-    color: "text-pink-400",
-    bgColor: "bg-pink-500/10"
+    name: "Sentiment Analysis", 
+    label: "Agent 4", 
+    icon: Activity, 
+    desc: "News sentiment, analyst ratings, social media trends integrating all previous analysis.",
+    color: "text-orange-400",
+    bgColor: "bg-orange-500/10"
   },
   { 
-    name: "ML Agent", 
-    label: "AI/ML", 
-    icon: Brain, 
-    desc: "Machine learning models for adaptive, data-driven predictions.",
-    color: "text-indigo-400",
-    bgColor: "bg-indigo-500/10"
-  },
-  { 
-    name: "Synth Oracle Agent", 
-    label: "Synthesis", 
+    name: "Final Synthesis", 
+    label: "Agent 5", 
     icon: Zap, 
-    desc: "Synthesizes signals from all agents for a unified market verdict.",
+    desc: "Comprehensive report with price targets, citations, and final investment recommendation.",
     color: "text-yellow-400",
     bgColor: "bg-yellow-500/10"
   }
@@ -147,8 +139,8 @@ export default function Home() {
   const features = [
     {
       icon: Brain,
-      title: "Multi-Agent AI System",
-      description: "8 specialized AI agents analyze markets from every angle",
+      title: "Sequential AI System",
+      description: "5 agents in sequence with compound intelligence and citations",
       color: "text-blue-400"
     },
     {
@@ -172,9 +164,9 @@ export default function Home() {
   ];
 
   const stats = [
-    { label: "Active Agents", value: "8", icon: Users },
-    { label: "Data Sources", value: "15+", icon: Globe },
-    { label: "Processing Speed", value: "<3s", icon: Zap },
+    { label: "Sequential Agents", value: "5", icon: Users },
+    { label: "Internet Research", value: "Real-time", icon: Globe },
+    { label: "Processing Time", value: "2-5min", icon: Zap },
     { label: "Market Coverage", value: "24/7", icon: Activity }
   ];
 
@@ -210,8 +202,8 @@ export default function Home() {
           </h1>
           
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
-            Revolutionary multi-agent AI system that analyzes markets in seconds, not hours. 
-            Get professional-grade trading signals with automated risk management.
+            Revolutionary 5-agent sequential AI system with compound intelligence and internet research. 
+            Each agent builds on previous insights with full citations and transparency.
           </p>
           
           <motion.div 
@@ -268,9 +260,9 @@ export default function Home() {
           transition={{ duration: 0.8, delay: 0.4 }}
         >
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-white mb-4">Multi-Agent AI System</h2>
+            <h2 className="text-3xl font-bold text-white mb-4">Sequential AI Agent System</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Our advanced AI agents work together to analyze markets from every possible angle
+              5 specialized agents working in sequence - each building on the previous agent's analysis for compound intelligence
             </p>
           </div>
           

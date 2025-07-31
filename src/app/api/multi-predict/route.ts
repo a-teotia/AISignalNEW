@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { AgentOrchestrator } from "@/lib/agents/agent-orchestrator";
+import { SequentialAgentOrchestrator } from "@/lib/agents/sequential-agent-orchestrator";
 import { db } from "@/lib/database";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -19,15 +19,16 @@ export async function POST(req: Request) {
     }
     const user_id = session.user.email;
 
-    console.log(`🚀 Starting multi-agent prediction for ${symbol}`);
+    console.log(`🚀 Starting sequential agent prediction for ${symbol}`);
     
-    const orchestrator = new AgentOrchestrator();
-    const multiAgentResult = await orchestrator.runMultiAgentAnalysis(symbol);
+    const orchestrator = new SequentialAgentOrchestrator();
+    const sequentialResult = await orchestrator.runSequentialAnalysis(symbol);
 
-    console.log(`✅ Multi-agent analysis completed for ${symbol}`);
+    console.log(`✅ Sequential agent analysis completed for ${symbol}`);
 
-    // Convert SIDEWAYS to NEUTRAL for database compatibility
-    const verdict = multiAgentResult.finalPrediction.direction === 'SIDEWAYS' ? 'NEUTRAL' : multiAgentResult.finalPrediction.direction;
+    // Map verdict to database format
+    const verdict = sequentialResult.finalVerdict.direction === 'BUY' ? 'UP' : 
+                   sequentialResult.finalVerdict.direction === 'SELL' ? 'DOWN' : 'NEUTRAL';
 
     // Save to database
     const predictionId = db.savePredictionVerdict({
@@ -35,13 +36,19 @@ export async function POST(req: Request) {
       symbol,
       prediction_date: predictionDate || new Date().toISOString().split('T')[0],
       verdict: verdict as 'UP' | 'DOWN' | 'NEUTRAL',
-      confidence: multiAgentResult.confidence,
-      reasoning: multiAgentResult.agents.synth.data.reasoning?.chainOfThought || 
-                `Multi-agent analysis: ${verdict} with ${multiAgentResult.confidence}% confidence`,
-      market_context: JSON.stringify(multiAgentResult.agents),
-      entry: multiAgentResult.finalPrediction.entryPrice,
-      tp: multiAgentResult.finalPrediction.takeProfit,
-      sl: multiAgentResult.finalPrediction.stopLoss,
+      confidence: sequentialResult.finalVerdict.confidence,
+      reasoning: sequentialResult.finalVerdict.reasoning || 
+                `Sequential analysis: ${verdict} with ${sequentialResult.finalVerdict.confidence}% confidence`,
+      market_context: JSON.stringify({
+        type: 'sequential_analysis',
+        executiveSummary: sequentialResult.executiveSummary,
+        allCitations: sequentialResult.allCitations,
+        agentChain: sequentialResult.agentChain,
+        processingTime: sequentialResult.totalProcessingTime
+      }),
+      entry: sequentialResult.finalVerdict.priceTarget, // Use price target as entry for now
+      tp: sequentialResult.finalVerdict.priceTarget * 1.03, // 3% take profit
+      sl: sequentialResult.finalVerdict.priceTarget * 0.97, // 3% stop loss
       timeframe: tradingStyle === 'swing' ? '4H' : tradingStyle === 'day' ? '1H' : tradingStyle === 'long' ? '1D' : tradingStyle === 'scalper' ? '15M' : '4H',
       style: tradingStyle
     });
@@ -51,14 +58,14 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       predictionId,
-      result: multiAgentResult,
-      message: "Multi-agent analysis completed successfully"
+      result: sequentialResult,
+      message: "Sequential agent analysis completed successfully"
     });
 
   } catch (error) {
-    console.error("❌ Multi-agent analysis error:", error);
+    console.error("❌ Sequential agent analysis error:", error);
     return NextResponse.json({ 
-      error: "Multi-agent analysis failed",
+      error: "Sequential agent analysis failed",
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
@@ -67,13 +74,16 @@ export async function POST(req: Request) {
 // GET endpoint to check agent status
 export async function GET() {
   try {
-    const orchestrator = new AgentOrchestrator();
-    const agentStatus = orchestrator.getAgentStatus();
-    
     return NextResponse.json({
       success: true,
-      agents: agentStatus,
-      message: "Multi-agent system is operational"
+      agents: [
+        { name: 'QuantitativeAnalysisAgent', description: 'Real market data, technical indicators, volume analysis' },
+        { name: 'MarketAnalysisAgent', description: 'Company fundamentals, earnings, competitive position' },
+        { name: 'TechnicalAnalysisAgent', description: 'Chart patterns, support/resistance levels' },
+        { name: 'SentimentAnalysisAgent', description: 'News sentiment, analyst ratings, social media trends' },
+        { name: 'FinalSynthesisAgent', description: 'Comprehensive report with citations and final recommendation' }
+      ],
+      message: "Sequential agent system is operational"
     });
   } catch (error) {
     console.error("❌ Agent status check failed:", error);

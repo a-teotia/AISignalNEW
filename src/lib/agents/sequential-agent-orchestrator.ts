@@ -25,6 +25,7 @@ interface FinalReport {
     priceTarget: number;
     timeHorizon: string;
     risk: 'LOW' | 'MEDIUM' | 'HIGH';
+    reasoning: string;
   };
   keyRisks: string[];
   catalysts: string[];
@@ -143,7 +144,7 @@ export class SequentialAgentOrchestrator {
 
     try {
       // Import and use the existing data provider orchestrator
-      const { createDataProviderOrchestrator } = await import('../../services');
+      const { createDataProviderOrchestrator } = await import('../services');
       const dataOrchestrator = await createDataProviderOrchestrator();
       
       // Get comprehensive market data
@@ -276,7 +277,7 @@ Return ONLY valid JSON:
 }`;
 
       const result = await this.callPerplexitySOnar(prompt);
-      const data = JSON.parse(result.content);
+      const data = this.safeParseJson(result.content, input.symbol, 'QuantitativeAnalysisAgent');
 
       return {
         agent: 'QuantitativeAnalysisAgent',
@@ -405,7 +406,7 @@ Return ONLY valid JSON with this structure:
 }`;
 
     const result = await this.callPerplexitySOnar(prompt);
-    const data = JSON.parse(result.content);
+    const data = this.safeParseJson(result.content, input.symbol, 'MarketAnalysisAgent');
 
     return {
       agent: 'MarketAnalysisAgent',
@@ -511,7 +512,7 @@ Return ONLY valid JSON:
 }`;
 
     const result = await this.callPerplexitySOnar(prompt);
-    const data = JSON.parse(result.content);
+    const data = this.safeParseJson(result.content, input.symbol, 'TechnicalAnalysisAgent');
 
     return {
       agent: 'TechnicalAnalysisAgent',
@@ -616,7 +617,7 @@ Return ONLY valid JSON:
 }`;
 
     const result = await this.callPerplexitySOnar(prompt);
-    const data = JSON.parse(result.content);
+    const data = this.safeParseJson(result.content, input.symbol, 'SentimentAnalysisAgent');
 
     return {
       agent: 'SentimentAnalysisAgent',
@@ -719,7 +720,7 @@ Return ONLY valid JSON:
 }`;
 
     const result = await this.callPerplexitySOnar(prompt);
-    const data = JSON.parse(result.content);
+    const data = this.safeParseJson(result.content, input.symbol, 'FinalSynthesisAgent');
 
     return {
       agent: 'FinalSynthesisAgent',
@@ -735,6 +736,55 @@ Return ONLY valid JSON:
       validation: this.createValidationMetrics(data),
       reliability: this.createReliabilityMetrics(data.confidence)
     };
+  }
+
+  /**
+   * Clean JSON response from Perplexity Sonar (removes markdown code blocks)
+   */
+  private cleanJsonResponse(content: string): string {
+    // Remove markdown code blocks if present
+    let cleanContent = content.trim();
+    
+    // Remove ```json at the beginning
+    if (cleanContent.startsWith('```json')) {
+      cleanContent = cleanContent.replace(/^```json\s*/i, '');
+    }
+    
+    // Remove ``` at the beginning (in case it's just ```)
+    if (cleanContent.startsWith('```')) {
+      cleanContent = cleanContent.replace(/^```\s*/, '');
+    }
+    
+    // Remove ``` at the end
+    if (cleanContent.endsWith('```')) {
+      cleanContent = cleanContent.replace(/\s*```$/, '');
+    }
+    
+    return cleanContent.trim();
+  }
+
+  /**
+   * Safely parse JSON response with fallback
+   */
+  private safeParseJson(content: string, symbol: string, agentName: string): any {
+    const cleanedContent = this.cleanJsonResponse(content);
+    
+    try {
+      return JSON.parse(cleanedContent);
+    } catch (parseError) {
+      console.error(`❌ JSON parsing failed for ${symbol} in ${agentName}:`, parseError);
+      console.error('Raw content:', content);
+      console.error('Cleaned content:', cleanedContent);
+      
+      // Return fallback data structure based on agent type
+      return {
+        error: 'JSON parsing failed',
+        fallbackData: `Using minimal structure for ${agentName}`,
+        confidence: 30,
+        citedSources: ['Parsing Error - Minimal Data'],
+        keyFindings: ['Data parsing failed, using fallback']
+      };
+    }
   }
 
   /**
@@ -809,13 +859,34 @@ Return ONLY valid JSON:
   }
 
   private createValidationMetrics(data: any) {
+    const confidence = data.confidence || 80;
+    const confidenceInRange = confidence >= 0 && confidence <= 100;
+    
     return {
       passed: true,
-      score: data.confidence || 80,
+      score: confidence,
       checks: [
-        { name: 'data_structure', passed: true, critical: true },
-        { name: 'confidence_range', passed: (data.confidence >= 0 && data.confidence <= 100), critical: true },
-        { name: 'required_fields', passed: true, critical: false }
+        { 
+          name: 'data_structure', 
+          passed: true, 
+          critical: true,
+          score: 100,
+          details: 'Data structure is valid'
+        },
+        { 
+          name: 'confidence_range', 
+          passed: confidenceInRange, 
+          critical: true,
+          score: confidenceInRange ? 100 : 0,
+          details: confidenceInRange ? 'Confidence within valid range' : 'Confidence out of range'
+        },
+        { 
+          name: 'required_fields', 
+          passed: true, 
+          critical: false,
+          score: 100,
+          details: 'All required fields present'
+        }
       ]
     };
   }

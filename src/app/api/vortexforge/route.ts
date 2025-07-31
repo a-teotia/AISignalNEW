@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { VortexForgeAgent } from '@/lib/agents/vortexforge-agent';
+// DISABLED - Use sequential analysis instead
+// import { VortexForgeAgent } from '@/lib/agents/vortexforge-agent';
 import { db } from '@/lib/database';
 
 export async function POST(req: NextRequest) {
-  try {
+  return NextResponse.json({ 
+    error: 'VortexForge agent disabled - use /api/sequential-analysis instead' 
+  }, { status: 410 });
+  
+  /* try {
     const body = await req.json();
     const { symbol, timeframe, realTimeData } = body;
     if (!symbol || !timeframe || !realTimeData) {
@@ -42,4 +47,5 @@ export async function POST(req: NextRequest) {
     console.error('VortexForge API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+  */
 } 
