@@ -515,150 +515,79 @@ export default function Dashboard() {
       <div className="relative z-10 p-6">
         <div className="max-w-7xl mx-auto space-y-6">
           
-          {/* 🎯 NEW: Retail Trader Features */}
-          {/* Market Mood & Trading Score */}
+          {/* 🎯 SIMPLIFIED: Essential Stats Only */}
           <motion.div 
-            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+            className="grid grid-cols-1 md:grid-cols-2 gap-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            {/* Market Mood Card */}
-            <Card className="trading-card border-0 group overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm mb-2">Market Mood</p>
-                    <div className="flex items-center space-x-3">
-                      <span className="text-4xl">{marketMood?.emoji || '😐'}</span>
-                      <div>
-                        <p className="text-xl font-bold" style={{ color: marketMood?.color || '#FFA500' }}>
-                          {marketMood?.mood || 'NEUTRAL'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {marketMood?.bullishPercent || 50}% Bullish Signals
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4 w-full bg-gray-700 rounded-full h-2">
-                  <div 
-                    className="h-2 rounded-full transition-all duration-300"
-                    style={{ 
-                      width: `${marketMood?.bullishPercent || 50}%`,
-                      backgroundColor: marketMood?.color || '#FFA500'
-                    }}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Trading Score Card */}
+            {/* Market Mood - Simplified */}
             <Card className="trading-card border-0 group">
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-muted-foreground text-sm">Trading Score</p>
-                    <div className="flex items-center space-x-3 mt-2">
-                      <p className="text-3xl font-bold text-white">{tradingScore}</p>
-                      <div className="text-2xl">
-                        {tradingScore >= 80 ? '🏆' : 
-                         tradingScore >= 60 ? '⭐' : 
-                         tradingScore >= 40 ? '📈' : '📊'}
-                      </div>
+                    <p className="text-muted-foreground text-sm">Market Mood</p>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <span className="text-2xl">{marketMood?.emoji || '😐'}</span>
+                      <p className="text-lg font-bold" style={{ color: marketMood?.color || '#FFA500' }}>
+                        {marketMood?.mood || 'NEUTRAL'}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {tradingScore >= 80 ? 'Expert Trader' : 
-                       tradingScore >= 60 ? 'Advanced' : 
-                       tradingScore >= 40 ? 'Intermediate' : 'Beginner'}
-                    </p>
                   </div>
-                  <div className="w-16 h-16 relative">
-                    <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 64 64">
-                      <circle cx="32" cy="32" r="28" stroke="#374151" strokeWidth="4" fill="none" />
-                      <circle 
-                        cx="32" cy="32" r="28" 
-                        stroke={tradingScore >= 70 ? '#10B981' : tradingScore >= 40 ? '#F59E0B' : '#EF4444'}
-                        strokeWidth="4" 
-                        fill="none"
-                        strokeDasharray={`${(tradingScore / 100) * 175.929} 175.929`}
-                        className="transition-all duration-500"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-xs font-bold text-white">{tradingScore}</span>
-                    </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-white">{marketMood?.bullishPercent || 50}%</p>
+                    <p className="text-xs text-muted-foreground">Bullish</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Win Streak Card */}
+            {/* Personal Stats - Combined */}
             <Card className="trading-card border-0 group">
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-muted-foreground text-sm">Win Streak</p>
-                    <div className="flex items-center space-x-2 mt-2">
-                      <p className="text-3xl font-bold text-white">{winStreak}</p>
-                      <div className="text-2xl">
-                        {winStreak >= 10 ? '🔥' : 
-                         winStreak >= 5 ? '⚡' : 
-                         winStreak >= 3 ? '✨' : '💪'}
+                    <p className="text-muted-foreground text-sm">Your Performance</p>
+                    <div className="flex items-center space-x-4 mt-1">
+                      <div className="flex items-center space-x-1">
+                        <span className="text-lg font-bold text-white">{tradingScore}</span>
+                        <span className="text-xs text-muted-foreground">score</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <span className="text-lg font-bold text-orange-400">{winStreak}</span>
+                        <span className="text-xs text-muted-foreground">streak</span>
+                        {winStreak >= 5 && <span className="text-lg">🔥</span>}
                       </div>
                     </div>
-                    <p className="text-xs text-orange-400">
-                      {winStreak >= 10 ? 'ON FIRE!' : 
-                       winStreak >= 5 ? 'Hot Streak!' : 
-                       winStreak >= 3 ? 'Building Momentum' : 'Keep Going!'}
-                    </p>
                   </div>
-                  <div className="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Zap className="w-6 h-6 text-orange-400" />
+                  <div className="text-2xl">
+                    {tradingScore >= 80 ? '🏆' : tradingScore >= 60 ? '⭐' : '📈'}
                   </div>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
 
-          {/* 🎯 NEW: Smart Alerts */}
+          {/* 🎯 SIMPLIFIED: Only High-Priority Alerts */}
           {alerts.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
+              className="mb-2"
             >
-              <Card className="trading-card border-0">
-                <CardHeader>
-                  <CardTitle className="text-xl text-white flex items-center">
-                    🚨 Smart Alerts
-                    <Badge variant="secondary" className="ml-2">{alerts.length}</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {alerts.slice(0, 3).map((alert, index) => (
-                      <motion.div
-                        key={alert.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="flex items-center p-3 rounded-lg bg-gray-800/50 border border-gray-700"
-                      >
-                        <div className="text-2xl mr-3">{alert.icon}</div>
-                        <div className="flex-1">
-                          <p className="font-medium text-white">{alert.title}</p>
-                          <p className="text-sm text-muted-foreground">{alert.message}</p>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(alert.timestamp).toLocaleTimeString()}
-                        </div>
-                      </motion.div>
-                    ))}
+              <div className="flex items-center space-x-4 overflow-x-auto pb-2">
+                {alerts.slice(0, 2).map((alert, index) => (
+                  <div
+                    key={alert.id}
+                    className="flex items-center space-x-2 bg-gray-800/50 rounded-lg px-4 py-2 border border-gray-700 whitespace-nowrap"
+                  >
+                    <span className="text-lg">{alert.icon}</span>
+                    <span className="text-sm font-medium text-white">{alert.title}</span>
                   </div>
-                </CardContent>
-              </Card>
+                ))}
+              </div>
             </motion.div>
           )}
           
@@ -1226,114 +1155,77 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* 🎯 NEW: Fundamental Analysis Insights */}
+                {/* 🎯 SIMPLIFIED: Fundamental Analysis */}
                 {viewingFullReport.fullAnalysis.fundamentalAnalysis && (
-                  <div className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 p-6 rounded-lg border border-purple-500/20">
-                    <h3 className="text-xl font-semibold text-purple-400 mb-4 flex items-center">
+                  <div className="bg-purple-900/20 p-4 rounded-lg border border-purple-500/20">
+                    <h3 className="text-lg font-semibold text-purple-400 mb-3 flex items-center">
                       🏛️ Fundamental Analysis
                       <Badge variant="outline" className="ml-2 text-xs border-purple-400 text-purple-400">
                         PREMIUM
                       </Badge>
                     </h3>
                     
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {/* Earnings Outlook */}
-                      <div className="bg-black/30 p-4 rounded-lg">
-                        <h4 className="text-sm font-medium text-gray-300 mb-2">Earnings Outlook</h4>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-2xl">
-                            {viewingFullReport.fullAnalysis.fundamentalAnalysis.earningsOutlook === 'BULLISH' ? '📈' :
-                             viewingFullReport.fullAnalysis.fundamentalAnalysis.earningsOutlook === 'BEARISH' ? '📉' : '➡️'}
-                          </span>
-                          <span className={`font-bold ${
-                            viewingFullReport.fullAnalysis.fundamentalAnalysis.earningsOutlook === 'BULLISH' ? 'text-green-400' :
-                            viewingFullReport.fullAnalysis.fundamentalAnalysis.earningsOutlook === 'BEARISH' ? 'text-red-400' : 'text-yellow-400'
-                          }`}>
-                            {viewingFullReport.fullAnalysis.fundamentalAnalysis.earningsOutlook}
-                          </span>
+                    <div className="grid md:grid-cols-3 gap-4 mb-3">
+                      <div className="text-center">
+                        <div className="text-2xl mb-1">
+                          {viewingFullReport.fullAnalysis.fundamentalAnalysis.earningsOutlook === 'BULLISH' ? '📈' :
+                           viewingFullReport.fullAnalysis.fundamentalAnalysis.earningsOutlook === 'BEARISH' ? '📉' : '➡️'}
                         </div>
+                        <p className="text-xs text-gray-400">Earnings</p>
+                        <p className={`text-sm font-bold ${
+                          viewingFullReport.fullAnalysis.fundamentalAnalysis.earningsOutlook === 'BULLISH' ? 'text-green-400' :
+                          viewingFullReport.fullAnalysis.fundamentalAnalysis.earningsOutlook === 'BEARISH' ? 'text-red-400' : 'text-yellow-400'
+                        }`}>
+                          {viewingFullReport.fullAnalysis.fundamentalAnalysis.earningsOutlook}
+                        </p>
                       </div>
 
-                      {/* Analyst Sentiment */}
-                      <div className="bg-black/30 p-4 rounded-lg">
-                        <h4 className="text-sm font-medium text-gray-300 mb-2">Analyst Sentiment</h4>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-2xl">
-                            {viewingFullReport.fullAnalysis.fundamentalAnalysis.analystSentiment === 'BULLISH' ? '👍' :
-                             viewingFullReport.fullAnalysis.fundamentalAnalysis.analystSentiment === 'BEARISH' ? '👎' : '🤝'}
-                          </span>
-                          <span className={`font-bold ${
-                            viewingFullReport.fullAnalysis.fundamentalAnalysis.analystSentiment === 'BULLISH' ? 'text-green-400' :
-                            viewingFullReport.fullAnalysis.fundamentalAnalysis.analystSentiment === 'BEARISH' ? 'text-red-400' : 'text-yellow-400'
-                          }`}>
-                            {viewingFullReport.fullAnalysis.fundamentalAnalysis.analystSentiment}
-                          </span>
+                      <div className="text-center">
+                        <div className="text-2xl mb-1">
+                          {viewingFullReport.fullAnalysis.fundamentalAnalysis.analystSentiment === 'BULLISH' ? '👍' :
+                           viewingFullReport.fullAnalysis.fundamentalAnalysis.analystSentiment === 'BEARISH' ? '👎' : '🤝'}
                         </div>
+                        <p className="text-xs text-gray-400">Analysts</p>
+                        <p className={`text-sm font-bold ${
+                          viewingFullReport.fullAnalysis.fundamentalAnalysis.analystSentiment === 'BULLISH' ? 'text-green-400' :
+                          viewingFullReport.fullAnalysis.fundamentalAnalysis.analystSentiment === 'BEARISH' ? 'text-red-400' : 'text-yellow-400'
+                        }`}>
+                          {viewingFullReport.fullAnalysis.fundamentalAnalysis.analystSentiment}
+                        </p>
                       </div>
 
-                      {/* Event Risk */}
-                      <div className="bg-black/30 p-4 rounded-lg">
-                        <h4 className="text-sm font-medium text-gray-300 mb-2">Event Risk</h4>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-2xl">
-                            {viewingFullReport.fullAnalysis.fundamentalAnalysis.eventRisk === 'HIGH' ? '🚨' :
-                             viewingFullReport.fullAnalysis.fundamentalAnalysis.eventRisk === 'MEDIUM' ? '⚠️' : '✅'}
-                          </span>
-                          <span className={`font-bold ${
-                            viewingFullReport.fullAnalysis.fundamentalAnalysis.eventRisk === 'HIGH' ? 'text-red-400' :
-                            viewingFullReport.fullAnalysis.fundamentalAnalysis.eventRisk === 'MEDIUM' ? 'text-yellow-400' : 'text-green-400'
-                          }`}>
-                            {viewingFullReport.fullAnalysis.fundamentalAnalysis.eventRisk}
-                          </span>
+                      <div className="text-center">
+                        <div className="text-2xl mb-1">
+                          {viewingFullReport.fullAnalysis.fundamentalAnalysis.eventRisk === 'HIGH' ? '🚨' :
+                           viewingFullReport.fullAnalysis.fundamentalAnalysis.eventRisk === 'MEDIUM' ? '⚠️' : '✅'}
                         </div>
-                      </div>
-
-                      {/* Fundamental Score */}
-                      <div className="bg-black/30 p-4 rounded-lg">
-                        <h4 className="text-sm font-medium text-gray-300 mb-2">Fundamental Score</h4>
-                        <div className="flex items-center space-x-2">
-                          <div className="text-2xl font-bold text-white">
-                            {viewingFullReport.fullAnalysis.fundamentalAnalysis.fundamentalScore || 0}
-                          </div>
-                          <div className="text-xs text-gray-400">/100</div>
-                        </div>
-                        <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
-                          <div 
-                            className="h-2 rounded-full transition-all duration-300"
-                            style={{ 
-                              width: `${Math.abs(viewingFullReport.fullAnalysis.fundamentalAnalysis.fundamentalScore || 0)}%`,
-                              backgroundColor: (viewingFullReport.fullAnalysis.fundamentalAnalysis.fundamentalScore || 0) > 0 ? '#10B981' : '#EF4444'
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Confidence */}
-                      <div className="bg-black/30 p-4 rounded-lg">
-                        <h4 className="text-sm font-medium text-gray-300 mb-2">Analysis Confidence</h4>
-                        <div className="flex items-center space-x-2">
-                          <div className="text-2xl font-bold text-white">
-                            {viewingFullReport.fullAnalysis.fundamentalAnalysis.confidence || 0}%
-                          </div>
-                          <div className="text-xl">
-                            {(viewingFullReport.fullAnalysis.fundamentalAnalysis.confidence || 0) >= 80 ? '🎯' :
-                             (viewingFullReport.fullAnalysis.fundamentalAnalysis.confidence || 0) >= 60 ? '👌' : '🤔'}
-                          </div>
-                        </div>
+                        <p className="text-xs text-gray-400">Event Risk</p>
+                        <p className={`text-sm font-bold ${
+                          viewingFullReport.fullAnalysis.fundamentalAnalysis.eventRisk === 'HIGH' ? 'text-red-400' :
+                          viewingFullReport.fullAnalysis.fundamentalAnalysis.eventRisk === 'MEDIUM' ? 'text-yellow-400' : 'text-green-400'
+                        }`}>
+                          {viewingFullReport.fullAnalysis.fundamentalAnalysis.eventRisk}
+                        </p>
                       </div>
                     </div>
 
-                    {/* Key Insights */}
-                    {viewingFullReport.fullAnalysis.fundamentalAnalysis.keyInsights?.length > 0 && (
-                      <div className="mt-4">
-                        <h4 className="text-sm font-medium text-purple-300 mb-2">Key Fundamental Insights</h4>
-                        <div className="space-y-1">
-                          {viewingFullReport.fullAnalysis.fundamentalAnalysis.keyInsights.slice(0, 3).map((insight: string, index: number) => (
-                            <p key={index} className="text-gray-300 text-sm">💡 {insight}</p>
-                          ))}
-                        </div>
+                    {/* Score and Top Insight */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-gray-400">Fundamental Score</p>
+                        <p className="text-lg font-bold text-white">
+                          {viewingFullReport.fullAnalysis.fundamentalAnalysis.fundamentalScore || 0}/100
+                        </p>
                       </div>
-                    )}
+                      {viewingFullReport.fullAnalysis.fundamentalAnalysis.keyInsights?.[0] && (
+                        <div className="flex-1 ml-4">
+                          <p className="text-xs text-purple-300">Key Insight:</p>
+                          <p className="text-sm text-gray-300">
+                            💡 {viewingFullReport.fullAnalysis.fundamentalAnalysis.keyInsights[0]}
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
