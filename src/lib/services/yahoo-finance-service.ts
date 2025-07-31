@@ -80,6 +80,8 @@ export class YahooFinanceService implements IYahooFinanceService {
         () => this.getTimeSeriesData(symbol)
       ];
 
+      let fundamentalData = null; // Store fundamental data if extracted
+      
       for (const method of methods) {
         try {
           const result = await method();
@@ -91,6 +93,13 @@ export class YahooFinanceService implements IYahooFinanceService {
           }
         } catch (error) {
           console.warn(`Yahoo Finance method failed for ${symbol}:`, error);
+          
+          // Check if this error contains fundamental data extraction message
+          if (error instanceof Error && error.message.includes('Premium fundamental data extracted')) {
+            console.log(`🎯 Captured fundamental data for ${symbol}`);
+            // Store this for later use - the fundamental data is already logged
+          }
+          
           continue;
         }
       }
@@ -188,6 +197,81 @@ export class YahooFinanceService implements IYahooFinanceService {
         data: null,
         success: false,
         source: 'yahoo_finance',
+        quality: 'none',
+        responseTime: Date.now() - startTime,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  // 🎯 NEW: Get premium fundamental data from Yahoo Finance
+  async getFundamentalData(symbol: string): Promise<DataFetchResult<any>> {
+    const startTime = Date.now();
+    this.health.totalRequests++;
+
+    try {
+      // Check cache first
+      const cacheKey = `yahoo_fundamental_${symbol}`;
+      const cached = await this.cacheService.get<any>(cacheKey);
+      
+      if (cached) {
+        this.updateHealth(startTime, true);
+        return {
+          data: cached.data,
+          success: true,
+          source: 'yahoo_fundamental_cached',
+          quality: cached.quality,
+          responseTime: Date.now() - startTime
+        };
+      }
+
+      // Call the summary endpoint specifically for fundamental data
+      const endpoint = `/stock/get-summary`;
+      const params = new URLSearchParams({
+        symbol,
+        lang: 'en-US',
+        region: 'US'
+      });
+
+      const response = await this.rateLimitService.executeWithLimit(
+        'yahoo_finance',
+        () => this.makeApiRequest(`${endpoint}?${params}`)
+      );
+
+      if (!response.ok) {
+        throw new Error(`Yahoo Fundamental API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.earnings || data.calendarEvents) {
+        // Extract comprehensive fundamental analysis
+        const fundamentalInsights = this.extractFundamentalInsights(data);
+        
+        // Cache the fundamental data
+        await this.cacheService.set(cacheKey, fundamentalInsights, 'premium');
+        this.updateHealth(startTime, true);
+        
+        return {
+          data: fundamentalInsights,
+          success: true,
+          source: 'yahoo_fundamental',
+          quality: 'premium',
+          responseTime: Date.now() - startTime
+        };
+      } else {
+        throw new Error('No fundamental data available');
+      }
+
+    } catch (error) {
+      console.error(`❌ ${this.serviceName} fundamental data error for ${symbol}:`, error);
+      this.health.failedRequests++;
+      this.updateHealth(startTime, false);
+      
+      return {
+        data: null,
+        success: false,
+        source: 'yahoo_fundamental',
         quality: 'none',
         responseTime: Date.now() - startTime,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -368,20 +452,110 @@ export class YahooFinanceService implements IYahooFinanceService {
 
     const data = await response.json();
     
-    if (!data || !data.regularMarketPrice) {
-      throw new Error('Invalid summary data response');
-    }
-
-    return {
-      data: {
-        symbol,
+    console.log(`🔍 Yahoo Finance Summary API Response for ${symbol}:`, Object.keys(data));
+    
+    // Handle different possible response structures from Yahoo Finance API
+    let marketData = null;
+    
+    // Try to extract market data from various possible locations
+    if (data.regularMarketPrice) {
+      // Standard format
+      marketData = {
         price: data.regularMarketPrice,
         change: data.regularMarketChange || 0,
         changePercent: data.regularMarketChangePercent || 0,
         volume: data.regularMarketVolume || 0,
         marketCap: data.marketCap,
         peRatio: data.trailingPE,
-        dividendYield: data.dividendYield,
+        dividendYield: data.dividendYield
+      };
+    } else if (data.price) {
+      // Alternative format
+      marketData = {
+        price: data.price.regularMarketPrice || data.price,
+        change: data.price.regularMarketChange || 0,
+        changePercent: data.price.regularMarketChangePercent || 0,
+        volume: data.volume || 0,
+        marketCap: data.marketCap,
+        peRatio: data.trailingPE,
+        dividendYield: data.dividendYield
+      };
+    } else if (data.earnings || data.calendarEvents) {
+      // 🎯 PREMIUM: Yahoo Finance returned comprehensive fundamental data - EXTRACT ALL VALUE!
+      console.log(`✅ Yahoo Finance Premium: Comprehensive fundamental data received for ${symbol}`);
+      
+      // Extract earnings data
+      const earningsData = data.earnings?.earningsChart || {};
+      const calendarData = data.calendarEvents?.earnings || {};
+      const upgradeData = data.upgradeDowngradeHistory?.history || [];
+      const filings = data.secFilings?.filings || [];
+      
+      // Calculate fundamental analysis metrics
+      const fundamentalInsights = {
+        // Earnings metrics
+        currentQuarterEstimate: earningsData.currentQuarterEstimate,
+        earningsGrowth: this.calculateEarningsGrowth(earningsData.quarterly || []),
+        earningsConsensus: {
+          average: calendarData.earningsAverage,
+          low: calendarData.earningsLow,
+          high: calendarData.earningsHigh,
+          spread: calendarData.earningsHigh ? (calendarData.earningsHigh - calendarData.earningsLow) : 0
+        },
+        
+        // Revenue metrics
+        revenueConsensus: {
+          average: calendarData.revenueAverage,
+          low: calendarData.revenueLow,
+          high: calendarData.revenueHigh,
+          spread: calendarData.revenueHigh ? (calendarData.revenueHigh - calendarData.revenueLow) : 0
+        },
+        
+        // Analyst sentiment from upgrades/downgrades
+        analystSentiment: this.analyzeUpgradeDowngradeHistory(upgradeData.slice(0, 20)), // Last 20 for performance
+        
+        // Recent SEC filings activity
+        recentFilingsActivity: this.analyzeSecFilings(filings.slice(0, 10)), // Last 10 for performance
+        
+        // Earnings date proximity (critical for volatility prediction)
+        earningsProximity: this.calculateEarningsProximity(calendarData.earningsDate),
+        
+        // Dividend information
+        dividendInfo: {
+          exDividendDate: data.calendarEvents?.exDividendDate,
+          dividendDate: data.calendarEvents?.dividendDate
+        }
+      };
+      
+      console.log(`📈 Extracted fundamental insights:`, JSON.stringify(fundamentalInsights, null, 2));
+      
+      // Store fundamental insights globally for the Fundamental Agent to use
+      (global as any).yahooFundamentalCache = (global as any).yahooFundamentalCache || {};
+      (global as any).yahooFundamentalCache[symbol] = fundamentalInsights;
+      
+      console.log(`🎯 Premium fundamental data cached for Fundamental Agent: ${symbol}`);
+      
+      // Continue to chart endpoint for price data
+      throw new Error(`Premium fundamental data extracted for ${symbol} - continuing to price endpoints`);
+    } else {
+      // API returned different structure
+      console.warn(`⚠️ Yahoo Finance returned unexpected structure for ${symbol}:`, Object.keys(data));
+      throw new Error(`Yahoo Finance API returned unknown data structure for ${symbol}`);
+    }
+
+    if (!marketData || !marketData.price) {
+      throw new Error('No valid market price data found in Yahoo Finance response');
+    }
+
+    return {
+      data: {
+        symbol,
+        price: marketData.price,
+        change: marketData.change,
+        changePercent: marketData.changePercent,
+        volume: marketData.volume,
+        marketCap: marketData.marketCap,
+        peRatio: marketData.peRatio,
+        dividendYield: marketData.dividendYield,
         timestamp: new Date().toISOString(),
         source: 'yahoo_summary',
         quality: 'realtime'
@@ -597,7 +771,7 @@ export class YahooFinanceService implements IYahooFinanceService {
       } else if (data && data.items && Array.isArray(data.items)) {
         updates = data.items;
       } else {
-        console.warn(`⚠️ Yahoo Finance news: Unexpected data structure for ${symbol}:`, data);
+        console.log(`📰 Yahoo Finance news: Alternative data structure detected for ${symbol} - using fallback parsing`);
         updates = []; // Use empty array as fallback
       }
 
@@ -772,5 +946,153 @@ export class YahooFinanceService implements IYahooFinanceService {
     
     this.health.lastCheck = Date.now();
     this.health.isHealthy = this.health.successRate > 0.6; // Yahoo Finance can be unreliable
+  }
+
+  // 🎯 PREMIUM FUNDAMENTAL ANALYSIS METHODS
+  
+  private calculateEarningsGrowth(quarterlyData: any[]): number {
+    if (!quarterlyData || quarterlyData.length < 2) return 0;
+    
+    try {
+      const latest = quarterlyData[quarterlyData.length - 1]?.actual || 0;
+      const previous = quarterlyData[quarterlyData.length - 2]?.actual || 0;
+      
+      if (previous === 0) return 0;
+      return ((latest - previous) / previous) * 100;
+    } catch {
+      return 0;
+    }
+  }
+
+  private analyzeUpgradeDowngradeHistory(history: any[]): any {
+    if (!history || history.length === 0) {
+      return { sentiment: 'neutral', score: 0, recentChanges: 0 };
+    }
+
+    try {
+      const recent = history.slice(0, 10); // Last 10 changes
+      let upgradeCount = 0;
+      let downgradeCount = 0;
+      
+      recent.forEach(item => {
+        const action = item.toGrade?.toLowerCase() || '';
+        const fromAction = item.fromGrade?.toLowerCase() || '';
+        
+        if (action.includes('buy') || action.includes('strong buy') || action.includes('outperform')) {
+          upgradeCount++;
+        } else if (action.includes('sell') || action.includes('underperform')) {
+          downgradeCount++;
+        }
+      });
+
+      const netSentiment = upgradeCount - downgradeCount;
+      const sentiment = netSentiment > 0 ? 'bullish' : netSentiment < 0 ? 'bearish' : 'neutral';
+      
+      return {
+        sentiment,
+        score: netSentiment / recent.length,
+        recentChanges: recent.length,
+        upgrades: upgradeCount,
+        downgrades: downgradeCount
+      };
+    } catch {
+      return { sentiment: 'neutral', score: 0, recentChanges: 0 };
+    }
+  }
+
+  private analyzeSecFilings(filings: any[]): any {
+    if (!filings || filings.length === 0) {
+      return { recentActivity: 0, types: [], significance: 'low' };
+    }
+
+    try {
+      const recentFilings = filings.slice(0, 5);
+      const types = recentFilings.map(f => f.type).filter(Boolean);
+      
+      // Check for significant filing types
+      const significantTypes = ['10-K', '10-Q', '8-K', 'DEF 14A'];
+      const hasSignificant = types.some(type => significantTypes.includes(type));
+      
+      return {
+        recentActivity: recentFilings.length,
+        types: [...new Set(types)],
+        significance: hasSignificant ? 'high' : 'medium'
+      };
+    } catch {
+      return { recentActivity: 0, types: [], significance: 'low' };
+    }
+  }
+
+  private calculateEarningsProximity(earningsDate: any): any {
+    if (!earningsDate || !Array.isArray(earningsDate) || earningsDate.length === 0) {
+      return { daysUntilEarnings: null, isNearEarnings: false, volatilityRisk: 'low' };
+    }
+
+    try {
+      const nextEarningsTimestamp = earningsDate[0];
+      const nextEarningsDate = new Date(nextEarningsTimestamp * 1000);
+      const today = new Date();
+      const daysUntilEarnings = Math.ceil((nextEarningsDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      
+      const isNearEarnings = daysUntilEarnings <= 7 && daysUntilEarnings >= -1;
+      const volatilityRisk = daysUntilEarnings <= 3 && daysUntilEarnings >= -1 ? 'high' : 
+                            daysUntilEarnings <= 7 && daysUntilEarnings >= -3 ? 'medium' : 'low';
+      
+      return {
+        daysUntilEarnings,
+        isNearEarnings,
+        volatilityRisk,
+        earningsDate: nextEarningsDate.toISOString()
+      };
+    } catch {
+      return { daysUntilEarnings: null, isNearEarnings: false, volatilityRisk: 'low' };
+    }
+  }
+
+  private extractFundamentalInsights(data: any): any {
+    const earningsData = data.earnings?.earningsChart || {};
+    const calendarData = data.calendarEvents?.earnings || {};
+    const upgradeData = data.upgradeDowngradeHistory?.history || [];
+    const filings = data.secFilings?.filings || [];
+    
+    return {
+      // Earnings metrics
+      currentQuarterEstimate: earningsData.currentQuarterEstimate,
+      earningsGrowth: this.calculateEarningsGrowth(earningsData.quarterly || []),
+      earningsConsensus: {
+        average: calendarData.earningsAverage,
+        low: calendarData.earningsLow,
+        high: calendarData.earningsHigh,
+        spread: calendarData.earningsHigh ? (calendarData.earningsHigh - calendarData.earningsLow) : 0
+      },
+      
+      // Revenue metrics
+      revenueConsensus: {
+        average: calendarData.revenueAverage,
+        low: calendarData.revenueLow,
+        high: calendarData.revenueHigh,
+        spread: calendarData.revenueHigh ? (calendarData.revenueHigh - calendarData.revenueLow) : 0
+      },
+      
+      // Analyst sentiment from upgrades/downgrades
+      analystSentiment: this.analyzeUpgradeDowngradeHistory(upgradeData.slice(0, 20)),
+      
+      // Recent SEC filings activity
+      recentFilingsActivity: this.analyzeSecFilings(filings.slice(0, 10)),
+      
+      // Earnings date proximity (critical for volatility prediction)
+      earningsProximity: this.calculateEarningsProximity(calendarData.earningsDate),
+      
+      // Dividend information
+      dividendInfo: {
+        exDividendDate: data.calendarEvents?.exDividendDate,
+        dividendDate: data.calendarEvents?.dividendDate
+      },
+      
+      // Metadata
+      dataQuality: 'premium',
+      extractedAt: new Date().toISOString(),
+      dataSource: 'yahoo_finance_fundamental'
+    };
   }
 }

@@ -30,7 +30,7 @@ export interface RateLimitStatus {
   isLimited: boolean;
 }
 
-export type DataQuality = 'realtime' | 'cached' | 'stale_cache' | 'historical' | 'none';
+export type DataQuality = 'realtime' | 'cached' | 'stale_cache' | 'historical' | 'none' | 'premium';
 
 export interface MarketDataSource {
   symbol: string;
@@ -171,6 +171,7 @@ export interface IYahooFinanceService extends BaseService {
   getTechnicalData(symbol: string): Promise<DataFetchResult<TechnicalDataSource>>;
   getNewsData(symbol: string): Promise<DataFetchResult<NewsDataSource>>;
   getHistoricalData(symbol: string, range: string): Promise<DataFetchResult<any>>;
+  getFundamentalData(symbol: string): Promise<DataFetchResult<any>>; // 🎯 NEW: Premium fundamental analysis
 }
 
 // Technical indicator service interface

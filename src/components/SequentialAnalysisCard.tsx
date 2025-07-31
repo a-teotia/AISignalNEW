@@ -25,6 +25,7 @@ interface AnalysisResult {
   marketAnalysis: any;
   technicalAnalysis: any;
   sentimentAnalysis: any;
+  fundamentalAnalysis: any; // 🎯 NEW: Fundamental analysis results
   keyRisks: string[];
   catalysts: any[];
   citedSources: string[];

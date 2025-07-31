@@ -486,6 +486,7 @@ export class DataQualityService implements IDataQualityService {
   private qualityToScore(quality: DataQuality): number {
     const scoreMap: Record<DataQuality, number> = {
       'realtime': 1.0,
+      'premium': 1.0,
       'cached': 0.8,
       'stale_cache': 0.6,
       'historical': 0.4,

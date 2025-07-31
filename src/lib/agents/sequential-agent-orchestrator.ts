@@ -1,4 +1,5 @@
 import { AgentInput, AgentOutput } from '../types/prediction-types';
+import { FundamentalAnalysisAgent } from './fundamental-analysis-agent';
 
 // Sequential Agent Types
 interface SequentialAgentInput {
@@ -19,6 +20,7 @@ interface FinalReport {
   marketAnalysis: any;
   technicalAnalysis: any;
   sentimentAnalysis: any;
+  fundamentalAnalysis: any; // 🎯 NEW: Fundamental analysis results
   finalVerdict: {
     direction: 'BUY' | 'SELL' | 'HOLD';
     confidence: number;
@@ -37,12 +39,14 @@ interface FinalReport {
 export class SequentialAgentOrchestrator {
   private perplexityApiKey: string;
   private baseUrl = 'https://api.perplexity.ai/chat/completions';
+  private fundamentalAgent: FundamentalAnalysisAgent; // 🎯 NEW: Fundamental agent instance
 
   constructor() {
     this.perplexityApiKey = process.env.PERPLEXITY_API_KEY || '';
     if (!this.perplexityApiKey) {
       throw new Error('PERPLEXITY_API_KEY is required for sequential agents');
     }
+    this.fundamentalAgent = new FundamentalAnalysisAgent(); // 🎯 Initialize fundamental agent
   }
 
   /**
@@ -89,7 +93,19 @@ export class SequentialAgentOrchestrator {
         }
       });
 
-      // FINAL AGENT: Synthesis & Report Generation
+      // 🎯 AGENT 5: Fundamental Analysis (NEW - Premium Yahoo Finance Data)
+      console.log('🏛️ Agent 5: Fundamental Analysis...');
+      const fundamentalAnalysis = await this.fundamentalAgent.runFundamentalAnalysis({
+        symbol,
+        previousAnalysis: {
+          quantData: quantAnalysis.nextAgentInput,
+          marketData: marketAnalysis.nextAgentInput,
+          technicalData: technicalAnalysis.nextAgentInput,
+          sentimentData: sentimentAnalysis.nextAgentInput
+        }
+      });
+
+      // FINAL AGENT: Synthesis & Report Generation (Now includes fundamental analysis)
       console.log('🎯 Final Agent: Synthesis & Report...');
       const finalReport = await this.runFinalSynthesisAgent({
         symbol,
@@ -97,18 +113,20 @@ export class SequentialAgentOrchestrator {
           quantAnalysis: quantAnalysis.data,
           marketAnalysis: marketAnalysis.data,
           technicalAnalysis: technicalAnalysis.data,
-          sentimentAnalysis: sentimentAnalysis.data
+          sentimentAnalysis: sentimentAnalysis.data,
+          fundamentalAnalysis: fundamentalAnalysis.data // 🎯 NEW: Include fundamental analysis
         }
       });
 
       const totalTime = Date.now() - startTime;
 
-      // Combine all citations including news collection citations
+      // Combine all citations including fundamental analysis citations
       const allCitations = [
         ...(quantAnalysis.citedSources || []),
         ...(marketAnalysis.citedSources || []),
         ...(technicalAnalysis.citedSources || []),
         ...(sentimentAnalysis.citedSources || []),
+        ...(fundamentalAnalysis.citedSources || []), // 🎯 NEW: Include fundamental citations
         ...(finalReport.citedSources || [])
       ].filter((source, index, self) => 
         // Remove duplicates and filter out generic fallback sources
@@ -128,7 +146,7 @@ export class SequentialAgentOrchestrator {
       console.log(`\n🎯 SEQUENTIAL ANALYSIS COMPLETED FOR ${symbol}:`);
       console.log(`======================================================`);
       console.log(`🕒 Total Processing Time: ${totalTime}ms`);
-      console.log(`📊 Agent Chain: ${['QuantitativeAnalysis', 'MarketAnalysis', 'TechnicalAnalysis', 'SentimentAnalysis', 'FinalSynthesis'].join(' → ')}`);
+      console.log(`📊 Agent Chain: ${['QuantitativeAnalysis', 'MarketAnalysis', 'TechnicalAnalysis', 'SentimentAnalysis', 'FundamentalAnalysis', 'FinalSynthesis'].join(' → ')}`);
       console.log(`🎯 Final Verdict: ${finalReport.data.finalVerdict?.direction || 'Unknown'} (${finalReport.data.finalVerdict?.confidence || 0}% confidence)`);
       console.log(`💰 Price Target: $${finalReport.data.finalVerdict?.priceTarget || 'N/A'}`);
       console.log(`⚡ Risk Level: ${finalReport.data.finalVerdict?.risk || 'Unknown'}`);
@@ -144,11 +162,12 @@ export class SequentialAgentOrchestrator {
         marketAnalysis: marketAnalysis.data,
         technicalAnalysis: technicalAnalysis.data,
         sentimentAnalysis: sentimentAnalysis.data,
+        fundamentalAnalysis: fundamentalAnalysis.data, // 🎯 NEW: Include fundamental analysis
         finalVerdict: finalReport.data.finalVerdict,
         keyRisks: finalReport.data.keyRisks,
         catalysts: finalReport.data.catalysts,
         allCitations,
-        agentChain: ['QuantitativeAnalysis', 'MarketAnalysis', 'TechnicalAnalysis', 'SentimentAnalysis', 'FinalSynthesis'],
+        agentChain: ['QuantitativeAnalysis', 'MarketAnalysis', 'TechnicalAnalysis', 'SentimentAnalysis', 'FundamentalAnalysis', 'FinalSynthesis'],
         totalProcessingTime: totalTime
       };
 
@@ -876,29 +895,36 @@ Return ONLY valid JSON:
    * Combines all four previous agents into final verdict with citations
    */
   private async runFinalSynthesisAgent(input: SequentialAgentInput): Promise<SequentialAgentOutput> {
-    const { quantAnalysis, marketAnalysis, technicalAnalysis, sentimentAnalysis } = input.previousAnalysis;
+    const { quantAnalysis, marketAnalysis, technicalAnalysis, sentimentAnalysis, fundamentalAnalysis } = input.previousAnalysis;
     
     const prompt = `You are the Chief Investment Officer making final investment recommendations. Synthesize all analysis for ${input.symbol}.
 
-COMPLETE ANALYSIS CHAIN (5 AGENTS):
+COMPLETE ANALYSIS CHAIN (6 AGENTS):
 QUANTITATIVE ANALYSIS (Agent 1): ${JSON.stringify(quantAnalysis, null, 2)}
 MARKET FUNDAMENTALS (Agent 2): ${JSON.stringify(marketAnalysis, null, 2)}
 TECHNICAL ANALYSIS (Agent 3): ${JSON.stringify(technicalAnalysis, null, 2)}
 SENTIMENT ANALYSIS (Agent 4): ${JSON.stringify(sentimentAnalysis, null, 2)}
+🎯 FUNDAMENTAL ANALYSIS (Agent 5): ${JSON.stringify(fundamentalAnalysis, null, 2)}
 
 COMPREHENSIVE NEWS & SENTIMENT DATA (Integrated Across All Agents):
 ${JSON.stringify(sentimentAnalysis?.nextAgentInput?.comprehensiveNewsData || technicalAnalysis?.nextAgentInput?.comprehensiveNewsData, null, 2)}
 
 SYNTHESIS TASKS:
-1. Integrate quantitative, fundamental, technical, and sentiment analysis from all 4 agents
-2. Leverage the comprehensive news analysis (Bloomberg, Reddit, Twitter, analyst reports) throughout the synthesis
-3. Cross-validate all findings with the real-time news sentiment and social media analysis
-4. Weight each analysis type based on current market conditions and news-driven factors
-5. Assess how news catalysts and sentiment shifts may impact technical and fundamental projections
-6. Generate specific price targets considering news-driven volatility and sentiment momentum
-7. Provide final BUY/SELL/HOLD recommendation integrating all quantitative, fundamental, technical, and comprehensive news analysis
+1. Integrate quantitative, market, technical, sentiment, and FUNDAMENTAL analysis from all 5 agents
+2. Pay special attention to the FUNDAMENTAL ANALYSIS (Agent 5) which includes:
+   - Premium earnings data and analyst consensus
+   - Earnings proximity and volatility risk assessment
+   - Analyst upgrades/downgrades sentiment
+   - SEC filings significance
+   - Corporate events and calendar analysis
+3. Leverage the comprehensive news analysis (Bloomberg, Reddit, Twitter, analyst reports) throughout the synthesis
+4. Cross-validate all findings with the real-time news sentiment and social media analysis
+5. Weight each analysis type based on current market conditions and news-driven factors
+6. Assess how fundamental catalysts (earnings, analyst changes, SEC filings) impact technical and sentiment projections
+7. Generate specific price targets considering fundamental valuations, news-driven volatility, and sentiment momentum
+8. Provide final BUY/SELL/HOLD recommendation integrating ALL SIX analysis dimensions
 
-CRITICAL: Your recommendation must integrate ALL aspects including the comprehensive news and social media sentiment data collected from multiple sources.
+CRITICAL: Your recommendation must integrate ALL aspects including the comprehensive news, social media sentiment, AND premium fundamental analysis data.
 
 CRITICAL: Provide detailed reasoning and cite specific sources from all previous agents.
 
@@ -906,12 +932,13 @@ Return ONLY valid JSON:
 {
   "executiveSummary": "2-3 sentence summary of investment thesis",
   "analysisIntegration": {
-    "quantitativeWeight": 0.30,
-    "fundamentalWeight": 0.25,
-    "technicalWeight": 0.25, 
-    "sentimentWeight": 0.20,
-    "conflicts": ["Technical momentum vs fundamental caution"],
-    "convergences": ["Quantitative and technical analysis both suggest strong momentum"]
+    "quantitativeWeight": 0.25,
+    "marketWeight": 0.20,
+    "technicalWeight": 0.20,
+    "sentimentWeight": 0.15,
+    "fundamentalWeight": 0.20,
+    "conflicts": ["Technical momentum vs fundamental caution", "Earnings risk vs sentiment optimism"],
+    "convergences": ["Quantitative and technical analysis both suggest strong momentum", "Fundamental and sentiment analysis align on growth prospects"]
   },
   "finalVerdict": {
     "direction": "BUY|SELL|HOLD",
