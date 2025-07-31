@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
 export async function POST(req: Request) {
-  const { symbol, predictionDate } = await req.json();
+  const { symbol, predictionDate, useSequential } = await req.json();
 
   if (!symbol) {
     return NextResponse.json({ error: 'Symbol is required' }, { status: 400 });
@@ -16,6 +16,55 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const user_id = session.user.email;
+
+  // If sequential analysis is requested, redirect to the new system
+  if (useSequential) {
+    try {
+      const { SequentialAgentOrchestrator } = await import("@/lib/agents/sequential-agent-orchestrator");
+      const orchestrator = new SequentialAgentOrchestrator();
+      const result = await orchestrator.runSequentialAnalysis(symbol);
+      
+      // Save to database
+      const predictionId = db.savePredictionVerdict({
+        user_id,
+        symbol,
+        prediction_date: predictionDate || new Date().toISOString().split('T')[0],
+        verdict: result.finalVerdict.direction === 'BUY' ? 'UP' : result.finalVerdict.direction === 'SELL' ? 'DOWN' : 'NEUTRAL',
+        confidence: result.finalVerdict.confidence,
+        reasoning: result.finalVerdict.reasoning,
+        market_context: JSON.stringify({
+          type: 'sequential_analysis',
+          executiveSummary: result.executiveSummary,
+          allCitations: result.allCitations,
+          agentChain: result.agentChain,
+          processingTime: result.totalProcessingTime
+        })
+      });
+
+      return NextResponse.json({
+        summary: result.executiveSummary,
+        prediction: {
+          id: predictionId,
+          verdict: result.finalVerdict.direction === 'BUY' ? 'UP' : result.finalVerdict.direction === 'SELL' ? 'DOWN' : 'NEUTRAL',
+          confidence: result.finalVerdict.confidence,
+          reasoning: result.finalVerdict.reasoning
+        },
+        sequentialAnalysis: {
+          priceTarget: result.finalVerdict.priceTarget,
+          timeHorizon: result.finalVerdict.timeHorizon,
+          risk: result.finalVerdict.risk,
+          keyRisks: result.keyRisks,
+          catalysts: result.catalysts,
+          citedSources: result.allCitations,
+          agentChain: result.agentChain,
+          processingTime: result.totalProcessingTime
+        }
+      });
+    } catch (error) {
+      console.error("Sequential analysis error:", error);
+      // Fall back to legacy system
+    }
+  }
 
   try {
     // Step 1: Fetch market context from Perplexity

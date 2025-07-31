@@ -272,6 +272,7 @@ export class DataProviderOrchestrator {
 
     try {
       // Shutdown all services in parallel
+      
       await Promise.all([
         this.services.cacheService.shutdown(),
         this.services.rateLimitService.shutdown(),
