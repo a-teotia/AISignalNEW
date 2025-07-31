@@ -3,13 +3,19 @@ import * as dotenv from 'dotenv';
 // Load environment variables
 dotenv.config({ path: '.env.local' });
 
-const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || '0136c92ffdmsh581cebdb6e939f0p1ac51cjsnecdd2de65819';
+const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 
 console.log('🔍 Testing RapidAPI Yahoo Finance...\n');
 
 async function testRapidAPI() {
   console.log('📡 RapidAPI Configuration:');
   console.log(`   Key from env: ${process.env.RAPIDAPI_KEY ? '✅ SET' : '❌ NOT SET'}`);
+  
+  if (!RAPIDAPI_KEY) {
+    console.log('   ❌ RAPIDAPI_KEY is required but not set in environment variables');
+    return;
+  }
+  
   console.log(`   Using key: ${RAPIDAPI_KEY.substring(0, 10)}...`);
   console.log(`   Key length: ${RAPIDAPI_KEY.length} characters\n`);
 

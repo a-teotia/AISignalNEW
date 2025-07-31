@@ -14,12 +14,38 @@ import SequentialAnalysisCard from "@/components/SequentialAnalysisCard";
 import { useSession } from "next-auth/react";
 import { X, TrendingUp, TrendingDown, Minus, Activity, Target, BarChart3, Clock, DollarSign, Shield, Zap, Users, Settings, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 
-// Trading style presets
+// Enhanced trading strategy configurations
 const tradingStyles = [
-  { id: 'swing', name: 'Swing Trading', icon: Clock, description: 'Medium-term positions (days to weeks)' },
-  { id: 'day', name: 'Day Trading', icon: Activity, description: 'Intraday positions (hours)' },
-  { id: 'long', name: 'Long-term', icon: Target, description: 'Long-term positions (months to years)' },
-  { id: 'scalper', name: 'Scalping', icon: Zap, description: 'Quick positions (minutes to hours)' }
+  { 
+    id: 'day', 
+    name: 'Day Trading', 
+    icon: Zap, 
+    description: 'Intraday opportunities with quick entries and exits',
+    timeHorizon: 'Hours to 1 day',
+    riskLevel: 'High',
+    analysisDepth: 'Fast',
+    weights: { technical: 40, marketStructure: 30, newsSentiment: 20, fundamental: 10 }
+  },
+  { 
+    id: 'swing', 
+    name: 'Swing Trading', 
+    icon: TrendingUp, 
+    description: 'Multi-day positions capturing intermediate moves',
+    timeHorizon: '2-10 days', 
+    riskLevel: 'Medium',
+    analysisDepth: 'Balanced',
+    weights: { technical: 25, fundamental: 25, newsSentiment: 25, marketStructure: 25 }
+  },
+  { 
+    id: 'longterm', 
+    name: 'Long Term', 
+    icon: Target, 
+    description: 'Position trading based on fundamental value',
+    timeHorizon: '2 weeks to 6 months',
+    riskLevel: 'Low', 
+    analysisDepth: 'Comprehensive',
+    weights: { fundamental: 50, newsSentiment: 20, technical: 20, marketStructure: 10 }
+  }
 ];
 
 // Popular assets with categories
@@ -788,7 +814,7 @@ export default function Dashboard() {
                 </div>
               </CardHeader>
               <CardContent className="relative z-10">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {tradingStyles.map((style) => {
                     const Icon = style.icon;
                     const isSelected = selectedTradingStyle === style.id;
@@ -822,13 +848,58 @@ export default function Dashboard() {
                           }`}>
                             {style.name}
                           </h3>
-                          <p className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors duration-300">
+                          <p className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors duration-300 mb-3">
                             {style.description}
                           </p>
+                          
+                          {/* Strategy Details */}
+                          <div className="space-y-2 text-xs">
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-500">Time Horizon:</span>
+                              <Badge variant="outline" className="text-xs">{style.timeHorizon}</Badge>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-500">Risk Level:</span>
+                              <Badge className={`text-xs ${
+                                style.riskLevel === 'High' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                style.riskLevel === 'Medium' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                                'bg-green-500/20 text-green-400 border-green-500/30'
+                              }`}>
+                                {style.riskLevel}
+                              </Badge>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-500">Analysis:</span>
+                              <Badge variant="outline" className="text-xs capitalize">{style.analysisDepth}</Badge>
+                            </div>
+                          </div>
+
+                          {/* Agent Weights Preview (on selected) */}
                           {isSelected && (
-                            <div className="mt-3 flex items-center space-x-1">
-                              <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse" />
-                              <span className="text-xs text-blue-300 font-medium uppercase tracking-wide">Selected</span>
+                            <div className="mt-4 pt-3 border-t border-white/10">
+                              <p className="text-xs text-gray-500 mb-2">Agent Weights:</p>
+                              <div className="grid grid-cols-2 gap-1 text-xs">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">Technical:</span>
+                                  <span className="text-blue-300">{style.weights.technical}%</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">Fundamental:</span>
+                                  <span className="text-blue-300">{style.weights.fundamental}%</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">News:</span>
+                                  <span className="text-blue-300">{style.weights.newsSentiment}%</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">Structure:</span>
+                                  <span className="text-blue-300">{style.weights.marketStructure}%</span>
+                                </div>
+                              </div>
+                              <div className="mt-2 flex items-center space-x-1">
+                                <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse" />
+                                <span className="text-xs text-blue-300 font-medium uppercase tracking-wide">Selected</span>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -937,6 +1008,7 @@ export default function Dashboard() {
           >
             <SequentialAnalysisCard 
               symbol={symbol} 
+              tradingStrategy={selectedTradingStyle}
               onAnalysisComplete={handleSequentialAnalysisComplete}
             />
           </motion.div>
@@ -1314,66 +1386,76 @@ export default function Dashboard() {
       {/* Full Report Modal */}
       {viewingFullReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="bg-gradient-to-br from-black via-gray-900 to-black border border-primary/30 rounded-2xl shadow-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto m-4">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-primary">
-                Full Analysis Report - {viewingFullReport.symbol}
-              </h2>
+          <div className="bg-gradient-to-br from-gray-900/95 via-gray-800/90 to-gray-900/95 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 rounded-2xl p-8 max-w-5xl w-full max-h-[90vh] overflow-y-auto m-4">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl flex items-center justify-center">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-blue-400">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <polyline points="14,2 14,8 20,8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-3xl font-bold premium-gradient-text">
+                    Full Analysis Report
+                  </h2>
+                  <p className="text-golden-gradient-text font-bold text-lg">{viewingFullReport.symbol}</p>
+                </div>
+              </div>
               <Button 
-                variant="outline" 
-                size="sm"
                 onClick={() => setViewingFullReport(null)}
-                className="border-primary/30 text-primary hover:bg-primary/10"
+                className="glass-light border border-white/20 hover:border-red-500/50 hover:bg-red-500/10 text-gray-300 hover:text-red-300 transition-all duration-300 rounded-xl p-3"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </Button>
             </div>
 
-            {/* Debug Info */}
-            <div className="bg-red-900/50 p-4 rounded-lg border border-red-500/20 mb-4">
-              <h3 className="text-lg font-semibold text-red-400 mb-2">Debug Info</h3>
-              <p className="text-gray-300 text-xs">Has fullAnalysis: {viewingFullReport.fullAnalysis ? 'YES' : 'NO'}</p>
-              <p className="text-gray-300 text-xs">Citations: {viewingFullReport.fullAnalysis?.citedSources?.length || 0}</p>
-              <p className="text-gray-300 text-xs">Raw analysis keys: {Object.keys(viewingFullReport).join(', ')}</p>
-              {viewingFullReport.fullAnalysis && (
-                <p className="text-gray-300 text-xs">Full analysis keys: {Object.keys(viewingFullReport.fullAnalysis).join(', ')}</p>
-              )}
-            </div>
-
             {viewingFullReport.fullAnalysis ? (
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {/* Executive Summary */}
                 {viewingFullReport.fullAnalysis.executiveSummary && (
-                  <div className="bg-gray-900/50 p-4 rounded-lg border border-primary/20">
-                    <h3 className="text-lg font-semibold text-primary mb-2">Executive Summary</h3>
-                    <p className="text-gray-300 text-sm">{viewingFullReport.fullAnalysis.executiveSummary}</p>
+                  <div className="elite-card p-6 hover-lift">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+                      <h3 className="text-xl font-bold golden-gradient-text">Executive Summary</h3>
+                    </div>
+                    <p className="text-gray-200 leading-relaxed text-lg">{viewingFullReport.fullAnalysis.executiveSummary}</p>
                   </div>
                 )}
 
                 {/* Final Verdict */}
-                <div className="bg-gray-900/50 p-4 rounded-lg border border-primary/20">
-                  <h3 className="text-lg font-semibold text-primary mb-3">Final Verdict</h3>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-400">Direction</p>
-                      <p className={`text-xl font-bold ${getDirectionColor(viewingFullReport.verdict)}`}>
+                <div className="premium-card p-6 hover-lift">
+                  <div className="flex items-center space-x-2 mb-6">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                    <h3 className="text-xl font-bold premium-gradient-text">Final Verdict</h3>
+                  </div>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="text-center p-4 glass-light rounded-xl border border-white/10">
+                      <p className="text-gray-400 text-sm uppercase tracking-wide mb-2">Direction</p>
+                      <p className={`text-2xl font-bold ${getDirectionColor(viewingFullReport.verdict)}`}>
                         {viewingFullReport.verdict}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-sm text-gray-400">Confidence</p>
-                      <p className="text-xl font-bold text-white">{viewingFullReport.confidence}%</p>
+                    <div className="text-center p-4 glass-light rounded-xl border border-white/10">
+                      <p className="text-gray-400 text-sm uppercase tracking-wide mb-2">Confidence</p>
+                      <p className="text-2xl font-bold text-blue-400">{viewingFullReport.confidence}%</p>
+                      <div className="w-full h-1 bg-gray-700 rounded-full mt-2 overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-blue-500 to-purple-400 rounded-full transition-all duration-1000"
+                          style={{ width: `${viewingFullReport.confidence}%` }}
+                        />
+                      </div>
                     </div>
                     {viewingFullReport.priceTarget && (
-                      <div>
-                        <p className="text-sm text-gray-400">Price Target</p>
-                        <p className="text-xl font-bold text-primary">${viewingFullReport.priceTarget}</p>
+                      <div className="text-center p-4 glass-light rounded-xl border border-white/10">
+                        <p className="text-gray-400 text-sm uppercase tracking-wide mb-2">Price Target</p>
+                        <p className="text-2xl font-bold golden-gradient-text">${viewingFullReport.priceTarget}</p>
                       </div>
                     )}
                     {viewingFullReport.fullAnalysis.finalVerdict?.risk && (
-                      <div>
-                        <p className="text-sm text-gray-400">Risk Level</p>
-                        <p className="text-xl font-bold text-white">{viewingFullReport.fullAnalysis.finalVerdict.risk}</p>
+                      <div className="text-center p-4 glass-light rounded-xl border border-white/10">
+                        <p className="text-gray-400 text-sm uppercase tracking-wide mb-2">Risk Level</p>
+                        <p className="text-2xl font-bold text-white">{viewingFullReport.fullAnalysis.finalVerdict.risk}</p>
                       </div>
                     )}
                   </div>
@@ -1381,57 +1463,69 @@ export default function Dashboard() {
 
                 {/* Citations */}
                 {viewingFullReport.fullAnalysis.citedSources?.length > 0 && (
-                  <div className="bg-gray-900/50 p-4 rounded-lg border border-primary/20">
-                    <h3 className="text-lg font-semibold text-primary mb-2">
-                      Citations ({viewingFullReport.fullAnalysis.citedSources.length})
-                    </h3>
-                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                  <div className="premium-card p-6 hover-lift">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                      <h3 className="text-xl font-bold text-blue-300">
+                        Citations ({viewingFullReport.fullAnalysis.citedSources.length})
+                      </h3>
+                    </div>
+                    <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
                       {viewingFullReport.fullAnalysis.citedSources.map((source: string, index: number) => (
-                        <div key={index} className="flex items-start space-x-2">
-                          <span className="text-primary font-medium text-sm min-w-[20px]">{index + 1}.</span>
-                          <div className="flex-1">
-                            {source.startsWith('http') ? (
-                              <a 
-                                href={source} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="text-blue-400 hover:text-blue-300 hover:underline text-sm break-all"
-                              >
-                                {source}
-                              </a>
-                            ) : (
-                              <p className="text-white text-sm leading-relaxed">{source}</p>
-                            )}
+                        <div key={index} className="p-3 glass-light rounded-lg border border-white/10 hover:border-blue-500/30 transition-all duration-300">
+                          <div className="flex items-start space-x-3">
+                            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500/30 to-purple-500/30 flex items-center justify-center text-blue-300 font-bold text-sm min-w-[24px]">
+                              {index + 1}
+                            </div>
+                            <div className="flex-1">
+                              {source.startsWith('http') ? (
+                                <a 
+                                  href={source} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="text-blue-400 hover:text-blue-300 hover:underline text-sm break-all transition-colors duration-300"
+                                >
+                                  {source}
+                                </a>
+                              ) : (
+                                <p className="text-gray-200 text-sm leading-relaxed">{source}</p>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
                     </div>
                     {viewingFullReport.fullAnalysis.citedSources.length > 8 && (
-                      <p className="text-gray-400 text-xs mt-2 text-center">
-                        Scroll to see all {viewingFullReport.fullAnalysis.citedSources.length} citations
-                      </p>
+                      <div className="mt-4 p-2 glass-light rounded-lg border border-white/10 text-center">
+                        <p className="text-gray-400 text-xs">
+                          Scroll to see all {viewingFullReport.fullAnalysis.citedSources.length} citations
+                        </p>
+                      </div>
                     )}
                   </div>
                 )}
 
-                {/* 🎯 SIMPLIFIED: Fundamental Analysis */}
+                {/* Fundamental Analysis */}
                 {viewingFullReport.fullAnalysis.fundamentalAnalysis && (
-                  <div className="bg-purple-900/20 p-4 rounded-lg border border-purple-500/20">
-                    <h3 className="text-lg font-semibold text-purple-400 mb-3 flex items-center">
-                      🏛️ Fundamental Analysis
-                      <Badge variant="outline" className="ml-2 text-xs border-purple-400 text-purple-400">
-                        PREMIUM
-                      </Badge>
-                    </h3>
+                  <div className="bg-gradient-to-br from-purple-500/10 to-violet-500/10 backdrop-blur-sm p-6 rounded-xl border border-purple-500/20 shadow-lg hover:shadow-xl transition-all duration-300">
+                    <div className="flex items-center space-x-2 mb-6">
+                      <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" />
+                      <h3 className="text-xl font-bold text-purple-300 flex items-center">
+                        🏛️ Fundamental Analysis
+                        <Badge variant="outline" className="ml-3 text-xs border-purple-400/50 text-purple-300 bg-purple-500/10 px-2 py-1 rounded-lg">
+                          PREMIUM
+                        </Badge>
+                      </h3>
+                    </div>
                     
-                    <div className="grid md:grid-cols-3 gap-4 mb-3">
-                      <div className="text-center">
-                        <div className="text-2xl mb-1">
+                    <div className="grid md:grid-cols-3 gap-6 mb-6">
+                      <div className="text-center p-4 glass-light rounded-xl border border-purple-500/20">
+                        <div className="text-3xl mb-2">
                           {viewingFullReport.fullAnalysis.fundamentalAnalysis.earningsOutlook === 'BULLISH' ? '📈' :
                            viewingFullReport.fullAnalysis.fundamentalAnalysis.earningsOutlook === 'BEARISH' ? '📉' : '➡️'}
                         </div>
-                        <p className="text-xs text-gray-400">Earnings</p>
-                        <p className={`text-sm font-bold ${
+                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Earnings Outlook</p>
+                        <p className={`text-lg font-bold ${
                           viewingFullReport.fullAnalysis.fundamentalAnalysis.earningsOutlook === 'BULLISH' ? 'text-green-400' :
                           viewingFullReport.fullAnalysis.fundamentalAnalysis.earningsOutlook === 'BEARISH' ? 'text-red-400' : 'text-yellow-400'
                         }`}>
@@ -1439,13 +1533,13 @@ export default function Dashboard() {
                         </p>
                       </div>
 
-                      <div className="text-center">
-                        <div className="text-2xl mb-1">
+                      <div className="text-center p-4 glass-light rounded-xl border border-purple-500/20">
+                        <div className="text-3xl mb-2">
                           {viewingFullReport.fullAnalysis.fundamentalAnalysis.analystSentiment === 'BULLISH' ? '👍' :
                            viewingFullReport.fullAnalysis.fundamentalAnalysis.analystSentiment === 'BEARISH' ? '👎' : '🤝'}
                         </div>
-                        <p className="text-xs text-gray-400">Analysts</p>
-                        <p className={`text-sm font-bold ${
+                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Analyst Sentiment</p>
+                        <p className={`text-lg font-bold ${
                           viewingFullReport.fullAnalysis.fundamentalAnalysis.analystSentiment === 'BULLISH' ? 'text-green-400' :
                           viewingFullReport.fullAnalysis.fundamentalAnalysis.analystSentiment === 'BEARISH' ? 'text-red-400' : 'text-yellow-400'
                         }`}>
@@ -1453,13 +1547,13 @@ export default function Dashboard() {
                         </p>
                       </div>
 
-                      <div className="text-center">
-                        <div className="text-2xl mb-1">
+                      <div className="text-center p-4 glass-light rounded-xl border border-purple-500/20">
+                        <div className="text-3xl mb-2">
                           {viewingFullReport.fullAnalysis.fundamentalAnalysis.eventRisk === 'HIGH' ? '🚨' :
                            viewingFullReport.fullAnalysis.fundamentalAnalysis.eventRisk === 'MEDIUM' ? '⚠️' : '✅'}
                         </div>
-                        <p className="text-xs text-gray-400">Event Risk</p>
-                        <p className={`text-sm font-bold ${
+                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Event Risk</p>
+                        <p className={`text-lg font-bold ${
                           viewingFullReport.fullAnalysis.fundamentalAnalysis.eventRisk === 'HIGH' ? 'text-red-400' :
                           viewingFullReport.fullAnalysis.fundamentalAnalysis.eventRisk === 'MEDIUM' ? 'text-yellow-400' : 'text-green-400'
                         }`}>
@@ -1469,17 +1563,23 @@ export default function Dashboard() {
                     </div>
 
                     {/* Score and Top Insight */}
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-gray-400">Fundamental Score</p>
-                        <p className="text-lg font-bold text-white">
-                          {viewingFullReport.fullAnalysis.fundamentalAnalysis.fundamentalScore || 0}/100
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="text-center p-4 glass-light rounded-xl border border-purple-500/20">
+                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Fundamental Score</p>
+                        <p className="text-3xl font-bold text-purple-300">
+                          {viewingFullReport.fullAnalysis.fundamentalAnalysis.fundamentalScore || 0}<span className="text-lg text-gray-400">/100</span>
                         </p>
+                        <div className="w-full h-2 bg-gray-700 rounded-full mt-3 overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-purple-500 to-violet-400 rounded-full transition-all duration-1000"
+                            style={{ width: `${viewingFullReport.fullAnalysis.fundamentalAnalysis.fundamentalScore || 0}%` }}
+                          />
+                        </div>
                       </div>
                       {viewingFullReport.fullAnalysis.fundamentalAnalysis.keyInsights?.[0] && (
-                        <div className="flex-1 ml-4">
-                          <p className="text-xs text-purple-300">Key Insight:</p>
-                          <p className="text-sm text-gray-300">
+                        <div className="p-4 glass-light rounded-xl border border-purple-500/20">
+                          <p className="text-xs text-purple-300 uppercase tracking-wide mb-2">Key Insight</p>
+                          <p className="text-gray-200 leading-relaxed">
                             💡 {viewingFullReport.fullAnalysis.fundamentalAnalysis.keyInsights[0]}
                           </p>
                         </div>
@@ -1489,28 +1589,39 @@ export default function Dashboard() {
                 )}
 
                 {/* Key Risks & Catalysts */}
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid md:grid-cols-2 gap-6">
                   {viewingFullReport.fullAnalysis.keyRisks?.length > 0 && (
-                    <div className="bg-gray-900/50 p-4 rounded-lg border border-red-500/20">
-                      <h3 className="text-lg font-semibold text-red-400 mb-2">Key Risks</h3>
-                      <div className="space-y-1">
+                    <div className="bg-gradient-to-br from-red-500/10 to-rose-500/10 backdrop-blur-sm p-6 rounded-xl border border-red-500/20 shadow-lg hover:shadow-xl transition-all duration-300">
+                      <div className="flex items-center space-x-2 mb-4">
+                        <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
+                        <h3 className="text-xl font-bold text-red-300">Key Risks</h3>
+                      </div>
+                      <div className="space-y-3">
                         {viewingFullReport.fullAnalysis.keyRisks.map((risk: string, index: number) => (
-                          <p key={index} className="text-gray-300 text-sm">• {risk}</p>
+                          <div key={index} className="flex items-start space-x-3 p-3 glass-light rounded-lg border border-red-500/20">
+                            <div className="w-4 h-4 rounded-full bg-red-500/20 flex items-center justify-center mt-0.5">
+                              <div className="w-1.5 h-1.5 bg-red-400 rounded-full" />
+                            </div>
+                            <p className="text-gray-200 text-sm leading-relaxed">{risk}</p>
+                          </div>
                         ))}
                       </div>
                     </div>
                   )}
 
                   {viewingFullReport.fullAnalysis.catalysts?.length > 0 && (
-                    <div className="bg-gray-900/50 p-4 rounded-lg border border-green-500/20">
-                      <h3 className="text-lg font-semibold text-green-400 mb-2">Catalysts</h3>
-                      <div className="space-y-2">
+                    <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm p-6 rounded-xl border border-green-500/20 shadow-lg hover:shadow-xl transition-all duration-300">
+                      <div className="flex items-center space-x-2 mb-4">
+                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                        <h3 className="text-xl font-bold text-green-300">Catalysts</h3>
+                      </div>
+                      <div className="space-y-3">
                         {viewingFullReport.fullAnalysis.catalysts.map((catalyst: any, index: number) => (
-                          <div key={index} className="text-sm">
-                            <p className="text-gray-300">{catalyst.event || catalyst}</p>
+                          <div key={index} className="p-3 glass-light rounded-lg border border-green-500/20">
+                            <p className="text-gray-200 font-medium text-sm">{catalyst.event || catalyst}</p>
                             {catalyst.date && (
-                              <p className="text-gray-400 text-xs">
-                                {catalyst.date} - {catalyst.impact} impact
+                              <p className="text-green-300 text-xs mt-1 font-medium">
+                                {catalyst.date} • {catalyst.impact} impact
                               </p>
                             )}
                           </div>
@@ -1521,26 +1632,38 @@ export default function Dashboard() {
                 </div>
 
                 {/* Agent Chain */}
-                <div className="bg-gray-900/50 p-4 rounded-lg border border-primary/20">
-                  <h3 className="text-lg font-semibold text-primary mb-2">Analysis Chain</h3>
-                  <p className="text-gray-300 text-sm">
-                    {viewingFullReport.agentChain?.join(' → ') || '5-Agent Sequential Analysis'}
-                  </p>
-                  {viewingFullReport.fullAnalysis.totalProcessingTime && (
-                    <p className="text-gray-400 text-xs mt-2">
-                      Total Processing Time: {viewingFullReport.fullAnalysis.totalProcessingTime}ms
+                <div className="premium-card p-6 hover-lift">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                    <h3 className="text-xl font-bold text-emerald-300">Analysis Chain</h3>
+                  </div>
+                  <div className="p-4 glass-light rounded-xl border border-white/10">
+                    <p className="text-gray-200 text-lg font-medium">
+                      {viewingFullReport.agentChain?.join(' → ') || '6-Agent Sequential Analysis'}
                     </p>
-                  )}
+                    {viewingFullReport.fullAnalysis.totalProcessingTime && (
+                      <p className="text-gray-400 text-sm mt-3">
+                        <span className="text-emerald-300 font-medium">Total Processing Time:</span> {viewingFullReport.fullAnalysis.totalProcessingTime}ms
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             ) : (
-              <div className="bg-yellow-900/50 p-4 rounded-lg border border-yellow-500/20">
-                <h3 className="text-lg font-semibold text-yellow-400 mb-2">Limited Data Available</h3>
-                <p className="text-gray-300 text-sm">This analysis only has basic summary data. Full analysis details may not have been preserved.</p>
-                <div className="mt-4 space-y-2">
-                  <p className="text-gray-300 text-sm"><strong>Reasoning:</strong> {viewingFullReport.reasoning}</p>
+              <div className="bg-gradient-to-r from-yellow-500/10 to-amber-500/10 backdrop-blur-sm p-6 rounded-xl border border-yellow-500/20 shadow-lg">
+                <div className="flex items-center space-x-2 mb-4">
+                  <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
+                  <h3 className="text-xl font-bold text-yellow-300">Limited Data Available</h3>
+                </div>
+                <p className="text-gray-200 leading-relaxed mb-4">This analysis only has basic summary data. Full analysis details may not have been preserved.</p>
+                <div className="space-y-3">
+                  <div className="p-3 glass-light rounded-lg border border-yellow-500/20">
+                    <p className="text-gray-300"><span className="text-yellow-300 font-semibold">Reasoning:</span> {viewingFullReport.reasoning}</p>
+                  </div>
                   {viewingFullReport.priceTarget && (
-                    <p className="text-gray-300 text-sm"><strong>Price Target:</strong> ${viewingFullReport.priceTarget}</p>
+                    <div className="p-3 glass-light rounded-lg border border-yellow-500/20">
+                      <p className="text-gray-300"><span className="text-yellow-300 font-semibold">Price Target:</span> ${viewingFullReport.priceTarget}</p>
+                    </div>
                   )}
                 </div>
               </div>

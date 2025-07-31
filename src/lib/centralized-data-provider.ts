@@ -77,7 +77,7 @@ export interface ComprehensiveData {
 
 export class CentralizedDataProvider {
   private static readonly RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
-  private static readonly TWELVEDATA_KEY = '3c7da267bcc24e8d8e2dfde0e257378b';
+  private static readonly TWELVEDATA_KEY = process.env.TWELVEDATA_KEY;
   
   // Cache for data with optimized TTL for rate limiting
   private static cache = new Map<string, { data: any; timestamp: number; quality: string }>();
@@ -1169,6 +1169,11 @@ export class CentralizedDataProvider {
 
   private static async fetchTwelveDataRSI(symbol: string): Promise<any> {
     try {
+      if (!this.TWELVEDATA_KEY) {
+        console.warn('TWELVEDATA_KEY not configured - skipping TwelveData RSI API call');
+        return null;
+      }
+      
       const result = await this.twelveDataRateLimitedRequest(async () => {
         const response = await fetch(`https://api.twelvedata.com/rsi?symbol=${symbol}&interval=1day&time_period=14&apikey=${this.TWELVEDATA_KEY}`);
         if (!response.ok) {
@@ -1190,6 +1195,10 @@ export class CentralizedDataProvider {
   }
 
   private static async fetchTwelveDataMACD(symbol: string): Promise<any> {
+    if (!this.TWELVEDATA_KEY) {
+      console.warn('TWELVEDATA_KEY not configured - skipping TwelveData MACD API call');
+      return null;
+    }
     return this.twelveDataRateLimitedRequest(() =>
       fetch(`https://api.twelvedata.com/macd?symbol=${symbol}&interval=1day&fast_period=12&slow_period=26&signal_period=9&apikey=${this.TWELVEDATA_KEY}`)
         .then(res => res.json())
@@ -1197,6 +1206,10 @@ export class CentralizedDataProvider {
   }
 
   private static async fetchTwelveDataBBands(symbol: string): Promise<any> {
+    if (!this.TWELVEDATA_KEY) {
+      console.warn('TWELVEDATA_KEY not configured - skipping TwelveData Bollinger Bands API call');
+      return null;
+    }
     return this.twelveDataRateLimitedRequest(() =>
       fetch(`https://api.twelvedata.com/bbands?symbol=${symbol}&interval=1day&time_period=20&sd=2&apikey=${this.TWELVEDATA_KEY}`)
         .then(res => res.json())
@@ -1204,6 +1217,10 @@ export class CentralizedDataProvider {
   }
 
   private static async fetchTwelveDataSMA(symbol: string, period: number): Promise<any> {
+    if (!this.TWELVEDATA_KEY) {
+      console.warn('TWELVEDATA_KEY not configured - skipping TwelveData SMA API call');
+      return null;
+    }
     return this.twelveDataRateLimitedRequest(() =>
       fetch(`https://api.twelvedata.com/sma?symbol=${symbol}&interval=1day&time_period=${period}&apikey=${this.TWELVEDATA_KEY}`)
         .then(res => res.json())
@@ -1211,6 +1228,10 @@ export class CentralizedDataProvider {
   }
 
   private static async fetchTwelveDataEMA(symbol: string, period: number): Promise<any> {
+    if (!this.TWELVEDATA_KEY) {
+      console.warn('TWELVEDATA_KEY not configured - skipping TwelveData EMA API call');
+      return null;
+    }
     return this.twelveDataRateLimitedRequest(() =>
       fetch(`https://api.twelvedata.com/ema?symbol=${symbol}&interval=1day&time_period=${period}&apikey=${this.TWELVEDATA_KEY}`)
         .then(res => res.json())

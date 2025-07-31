@@ -57,8 +57,8 @@ export class FundamentalAnalysisAgent {
         // Fallback: Try to get fresh fundamental data
         try {
           const orchestrator = await createDataProviderOrchestrator();
-          const yahooService = (orchestrator as any).yahooFinanceService;
-          const result = await yahooService.getFundamentalData(input.symbol);
+          await orchestrator.initialize();
+          const result = await orchestrator.yahooFinanceService.getFundamentalData(input.symbol);
           if (result.success && result.data) {
             fundamentalData = result.data;
             console.log(`✅ [FUNDAMENTAL AGENT] Retrieved fresh premium fundamental data`);
@@ -79,21 +79,8 @@ export class FundamentalAnalysisAgent {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama-3.1-sonar-large-128k-online',
+          model: 'sonar',
           messages: [
-            {
-              role: 'system',
-              content: `You are a FUNDAMENTAL ANALYSIS EXPERT specializing in earnings analysis, analyst sentiment, and corporate events. You have access to real-time internet data and financial databases.
-              
-              Your expertise includes:
-              - Earnings analysis and beat/miss probability
-              - Analyst upgrade/downgrade interpretation  
-              - SEC filing significance assessment
-              - Corporate event impact analysis
-              - Valuation and consensus analysis
-              
-              Always provide specific, actionable insights with confidence scores.`
-            },
             {
               role: 'user',
               content: prompt
@@ -101,7 +88,7 @@ export class FundamentalAnalysisAgent {
           ],
           max_tokens: 4000,
           temperature: 0.1,
-          search_domain_filter: ["bloomberg.com", "reuters.com", "cnbc.com", "yahoo.com", "sec.gov", "marketwatch.com", "wsj.com", "ft.com"]
+          stream: false
         }),
       });
 
@@ -162,7 +149,18 @@ export class FundamentalAnalysisAgent {
   }
 
   private createFundamentalPrompt(symbol: string, fundamentalData: any, previousAnalysis: any): string {
-    let prompt = `FUNDAMENTAL ANALYSIS REQUEST for ${symbol}
+    let prompt = `You are a FUNDAMENTAL ANALYSIS EXPERT specializing in earnings analysis, analyst sentiment, and corporate events. You have access to real-time internet data and financial databases.
+
+Your expertise includes:
+- Earnings analysis and beat/miss probability
+- Analyst upgrade/downgrade interpretation  
+- SEC filing significance assessment
+- Corporate event impact analysis
+- Valuation and consensus analysis
+
+Always provide specific, actionable insights with confidence scores.
+
+FUNDAMENTAL ANALYSIS REQUEST for ${symbol}
 
 TASK: Perform comprehensive fundamental analysis for ${symbol} focusing on:
 1. EARNINGS ANALYSIS - Growth trends, beat/miss probability, guidance

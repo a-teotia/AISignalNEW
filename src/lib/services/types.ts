@@ -263,7 +263,7 @@ export const DEFAULT_SERVICE_CONFIG: ServiceConfig = {
   },
   apis: {
     rapidApiKey: process.env.RAPIDAPI_KEY,
-    twelveDataKey: process.env.TWELVEDATA_KEY || '3c7da267bcc24e8d8e2dfde0e257378b',
+    twelveDataKey: process.env.TWELVEDATA_KEY,
     timeouts: {
       default: 30000,
       yahooFinance: 15000,

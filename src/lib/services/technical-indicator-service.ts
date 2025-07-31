@@ -29,6 +29,9 @@ export class TechnicalIndicatorService implements ITechnicalIndicatorService {
     rateLimitService: IRateLimitService,
     cacheService: ICacheService
   ) {
+    if (!twelveDataKey) {
+      console.warn('TechnicalIndicatorService: twelveDataKey not provided - service will have limited functionality');
+    }
     this.twelveDataKey = twelveDataKey;
     this.rateLimitService = rateLimitService;
     this.cacheService = cacheService;
@@ -544,6 +547,11 @@ export class TechnicalIndicatorService implements ITechnicalIndicatorService {
 
   private async fetchTwelveDataRSI(symbol: string): Promise<any> {
     try {
+      if (!this.twelveDataKey) {
+        console.warn('TwelveData API key not configured - skipping RSI API call');
+        return null;
+      }
+      
       const result = await this.rateLimitService.executeWithLimit(
         'twelve_data',
         async () => {

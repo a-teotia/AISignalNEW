@@ -606,4 +606,9 @@ export class DataProviderOrchestrator {
       console.log(`   ${status} ${serviceName}: ${successRate}% success rate (${health.totalRequests} requests)`);
     });
   }
+
+  // 🎯 NEW: Expose service access for agents
+  get yahooFinanceService() {
+    return this.services.yahooFinanceService;
+  }
 }
