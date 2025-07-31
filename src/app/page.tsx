@@ -171,11 +171,23 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/95 relative overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] pointer-events-none" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+    <div className="min-h-screen bg-gradient-to-br from-[#0a0b0d] via-[#0f1012] to-[#0a0b0d] relative overflow-hidden">
+      {/* Premium Background Effects - Same as Dashboard */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.03)_1px,transparent_1px)] bg-[size:24px_24px]" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(147,51,234,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(147,51,234,0.02)_1px,transparent_1px)] bg-[size:48px_48px]" />
+        
+        <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-blue-500/8 via-blue-500/3 to-transparent" />
+        <div className="absolute bottom-0 right-0 w-[500px] h-96 bg-gradient-radial from-purple-500/12 via-purple-500/4 to-transparent" />
+        <div className="absolute top-1/3 left-0 w-80 h-80 bg-gradient-radial from-emerald-500/10 via-emerald-500/3 to-transparent" />
+        <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-gradient-radial from-amber-500/8 via-transparent to-transparent" />
+        
+        <div className="absolute top-20 left-1/4 w-1 h-1 bg-blue-400/80 rounded-full animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+        <div className="absolute top-1/3 right-1/4 w-1 h-1 bg-emerald-400/80 rounded-full animate-pulse delay-700 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+        <div className="absolute bottom-1/4 left-1/3 w-1 h-1 bg-purple-400/80 rounded-full animate-pulse delay-1000 shadow-[0_0_10px_rgba(147,51,234,0.5)]" />
+        <div className="absolute top-1/2 left-1/2 w-1 h-1 bg-amber-400/60 rounded-full animate-pulse delay-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+        <div className="absolute bottom-1/3 right-1/4 w-1 h-1 bg-rose-400/60 rounded-full animate-pulse delay-1500 shadow-[0_0_8px_rgba(244,63,94,0.4)]" />
+      </div>
       
       <div className="relative z-10 container mx-auto px-4 py-16">
         {/* Hero Section */}
@@ -186,24 +198,24 @@ export default function Home() {
           transition={{ duration: 0.8 }}
         >
           <motion.div 
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full glass-premium border border-primary/30 mb-8 shadow-lg"
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm text-primary font-medium">Powered by Multi-Agent AI</span>
+            <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+            <span className="text-sm premium-gradient-text font-bold tracking-wide uppercase">Powered by Multi-Agent AI</span>
           </motion.div>
           
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white via-white to-white/70 bg-clip-text text-transparent">
+          <h1 className="text-6xl md:text-8xl font-bold mb-8 premium-gradient-text elite-glow-text animate-float">
             AI Signal Trading
             <br />
-            <span className="text-primary glow-text">Platform</span>
+            <span className="golden-gradient-text">Platform</span>
           </h1>
           
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
-            Revolutionary 5-agent sequential AI system with compound intelligence and internet research. 
-            Each agent builds on previous insights with full citations and transparency.
+          <p className="text-xl md:text-2xl text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed">
+            Revolutionary <span className="premium-gradient-text font-semibold">6-agent sequential AI system</span> with compound intelligence and internet research. 
+            Each agent builds on previous insights with <span className="text-blue-400 font-semibold">full citations and transparency</span>.
           </p>
           
           <motion.div 
@@ -214,19 +226,21 @@ export default function Home() {
           >
             <Button 
               size="lg" 
-              className="bg-primary hover:bg-primary/90 text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-2xl hover:shadow-primary/25 transition-all duration-300 group"
+              className="elite-card hover-glow px-10 py-6 text-xl font-bold rounded-2xl animate-gradient shadow-premium transition-all duration-500 hover:scale-105 group"
               onClick={handleGetStarted}
             >
-              {session ? 'Go to Dashboard' : 'Start Trading'}
-              <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+              <span className="golden-gradient-text">
+                {session ? 'Go to Dashboard' : 'Start Trading'}
+              </span>
+              <ArrowRight className="w-6 h-6 ml-3 group-hover:translate-x-2 transition-transform duration-300" />
             </Button>
             <Button 
               variant="outline" 
               size="lg"
-              className="border-muted-foreground/20 hover:border-primary/50 px-8 py-6 text-lg rounded-xl"
+              className="glass-premium border-white/30 text-white hover:bg-white/10 hover:border-white/50 px-10 py-6 text-xl rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
               onClick={() => router.push('/demo')}
             >
-              View Demo
+              <span className="premium-glow-text">View Demo</span>
             </Button>
           </motion.div>
         </motion.div>
@@ -241,13 +255,15 @@ export default function Home() {
           {stats.map((stat, index) => {
             const Icon = stat.icon;
             return (
-              <Card key={index} className="trading-card text-center border-0">
-                <CardContent className="p-6">
-                  <Icon className="w-8 h-8 text-primary mx-auto mb-3" />
-                  <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
-                  <div className="text-sm text-muted-foreground">{stat.label}</div>
-                </CardContent>
-              </Card>
+              <div key={index} className="premium-card text-center hover-lift group">
+                <div className="p-8">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <Icon className="w-8 h-8 text-blue-400 group-hover:text-blue-300 transition-colors" />
+                  </div>
+                  <div className="text-4xl font-bold premium-gradient-text mb-2">{stat.value}</div>
+                  <div className="text-sm text-gray-300 uppercase tracking-wide font-medium">{stat.label}</div>
+                </div>
+              </div>
             );
           })}
         </motion.div>
@@ -260,34 +276,34 @@ export default function Home() {
           transition={{ duration: 0.8, delay: 0.4 }}
         >
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-white mb-4">Sequential AI Agent System</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              5 specialized agents working in sequence - each building on the previous agent's analysis for compound intelligence
+            <h2 className="text-4xl md:text-5xl font-bold premium-gradient-text mb-6">Sequential AI Agent System</h2>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
+              <span className="text-blue-400 font-semibold">6 specialized agents</span> working in sequence - each building on the previous agent's analysis for <span className="premium-gradient-text font-semibold">compound intelligence</span>
             </p>
           </div>
           
           <div className="max-w-4xl mx-auto">
             <motion.div 
-              className="glassmorphism rounded-2xl p-8 mb-8"
+              className="elite-card p-10 mb-10 hover-glow"
               key={currentAgentIndex}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5 }}
             >
               <div className="flex items-center gap-6">
-                <div className={`p-4 rounded-xl ${agents[currentAgentIndex].bgColor} border border-current/20`}>
+                <div className={`p-6 rounded-2xl ${agents[currentAgentIndex].bgColor} border border-current/30 shadow-lg hover:scale-110 transition-transform duration-300`}>
                   {React.createElement(agents[currentAgentIndex].icon, { 
-                    className: `w-12 h-12 ${agents[currentAgentIndex].color}` 
+                    className: `w-14 h-14 ${agents[currentAgentIndex].color}` 
                   })}
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-white mb-2">
+                  <h3 className="text-3xl font-bold premium-gradient-text mb-3">
                     {agents[currentAgentIndex].name}
                   </h3>
-                  <Badge className={`${agents[currentAgentIndex].color} bg-transparent border border-current mb-3`}>
+                  <Badge className={`${agents[currentAgentIndex].color} glass-premium border border-current/50 px-4 py-1 text-sm font-bold mb-4`}>
                     {agents[currentAgentIndex].label}
                   </Badge>
-                  <p className="text-muted-foreground text-lg">
+                  <p className="text-gray-300 text-xl leading-relaxed">
                     {agents[currentAgentIndex].desc}
                   </p>
                 </div>
@@ -317,9 +333,9 @@ export default function Home() {
           transition={{ duration: 0.8, delay: 0.5 }}
         >
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white mb-4">Why Choose Our Platform?</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Built for retail traders who want institutional-grade analysis without the complexity
+            <h2 className="text-4xl md:text-5xl font-bold premium-gradient-text mb-6">Why Choose Our Platform?</h2>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
+              Built for retail traders who want <span className="text-blue-400 font-semibold">institutional-grade analysis</span> without the complexity
             </p>
           </div>
           
@@ -333,17 +349,19 @@ export default function Home() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.1 * index }}
                 >
-                  <Card className="trading-card border-0 h-full">
-                    <CardContent className="p-6">
-                      <Icon className={`w-10 h-10 ${feature.color} mb-4`} />
-                      <h3 className="text-lg font-semibold text-white mb-3">
+                  <div className="premium-card h-full hover-lift group">
+                    <div className="p-8">
+                      <div className="w-16 h-16 mb-6 bg-gradient-to-br from-gray-700/50 to-gray-600/30 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                        <Icon className={`w-8 h-8 ${feature.color} group-hover:scale-110 transition-transform duration-300`} />
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-4 group-hover:text-blue-300 transition-colors">
                         {feature.title}
                       </h3>
-                      <p className="text-muted-foreground text-sm leading-relaxed">
+                      <p className="text-gray-300 text-base leading-relaxed">
                         {feature.description}
                       </p>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </motion.div>
               );
             })}
@@ -357,16 +375,16 @@ export default function Home() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.7 }}
         >
-          <p className="text-muted-foreground mb-6">Powered By</p>
+          <p className="text-gray-400 mb-8 text-lg font-medium tracking-wide uppercase">Powered By</p>
           <div className="flex justify-center items-center gap-8 flex-wrap">
             {poweredBy.map((provider, index) => (
               <motion.div 
                 key={index} 
-                className="flex items-center gap-3 opacity-60 hover:opacity-100 transition-opacity"
+                className="flex items-center gap-4 opacity-70 hover:opacity-100 transition-all duration-300 glass-light rounded-xl p-4 hover:scale-105 hover:shadow-lg"
                 whileHover={{ scale: 1.05 }}
               >
                 {provider.logo}
-                <span className="text-sm text-muted-foreground font-medium">
+                <span className="text-base text-gray-300 font-semibold">
                   {provider.name}
                 </span>
               </motion.div>

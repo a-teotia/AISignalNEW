@@ -39,62 +39,144 @@ export default function DemoPage() {
   };
 
   return (
-    <section className="section flex flex-col items-center justify-center min-h-[80vh] text-center">
-      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="w-full max-w-2xl mx-auto">
-        <Card className="glass card-hover">
-          <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-bold gradient-text drop-shadow">Demo: Market Analysis</CardTitle>
-            <CardDescription className="text-white/80 font-medium">
-              Try AI-powered predictions for any symbol. No signup required for your first prediction!
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleAnalyze} className="flex flex-col gap-6">
-              <Input
-                placeholder="Enter stock symbol (e.g., AAPL, TSLA, CBA.AX)"
-                value={symbol}
-                onChange={e => setSymbol(e.target.value.toUpperCase())}
-                required
-                className="text-lg px-4 py-3 rounded-lg bg-white/10 border border-white/10"
-              />
-              <Select value={timeframe} onValueChange={setTimeframe}>
-                <SelectTrigger className="w-full bg-white/10 border border-white/10 text-lg rounded-lg">
-                  <SelectValue placeholder="Select Timeframe" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-900 text-white border border-gray-700">
-                  <SelectItem value="1day">1 Day</SelectItem>
-                  <SelectItem value="1week">1 Week</SelectItem>
-                  <SelectItem value="1month">1 Month</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button type="submit" className="btn-primary text-lg py-3 rounded-lg" disabled={loading}>
-                {loading ? "Analyzing..." : "Get AI Predictions"}
+    <div className="min-h-screen bg-gradient-to-br from-[#0a0b0d] via-[#0f1012] to-[#0a0b0d] relative overflow-hidden">
+      {/* Premium Background Effects */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.03)_1px,transparent_1px)] bg-[size:24px_24px]" />
+        <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-blue-500/8 via-blue-500/3 to-transparent" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-radial from-purple-500/12 via-purple-500/4 to-transparent" />
+      </div>
+      
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-[80vh] p-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ duration: 0.7 }} 
+          className="w-full max-w-3xl mx-auto"
+        >
+          {/* Demo Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl md:text-5xl font-bold premium-gradient-text mb-4">
+              AI Trading Demo
+            </h1>
+            <p className="text-xl text-gray-300 mb-2">
+              Experience world-class AI-powered market analysis
+            </p>
+            <p className="text-gray-400">
+              No signup required for your first prediction!
+            </p>
+          </div>
+          
+          <div className="elite-card p-8 hover-glow">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-white mb-2">Live Market Analysis</h2>
+              <p className="text-gray-300">
+                Try our 6-agent sequential AI system on any symbol
+              </p>
+            </div>
+            <form onSubmit={handleAnalyze} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-300 uppercase tracking-wide">Stock Symbol</label>
+                <Input
+                  placeholder="Enter symbol (e.g., AAPL, TSLA, CBA.AX)"
+                  value={symbol}
+                  onChange={e => setSymbol(e.target.value.toUpperCase())}
+                  required
+                  className="text-lg px-6 py-4 rounded-xl glass-light border border-white/20 text-white placeholder:text-gray-400 focus:border-blue-500/50 transition-all duration-300"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-300 uppercase tracking-wide">Analysis Timeframe</label>
+                <Select value={timeframe} onValueChange={setTimeframe}>
+                  <SelectTrigger className="w-full glass-light border border-white/20 text-lg rounded-xl px-6 py-4 text-white">
+                    <SelectValue placeholder="Select Timeframe" />
+                  </SelectTrigger>
+                  <SelectContent className="glass-heavy border border-white/20 text-white">
+                    <SelectItem value="1day" className="text-white hover:bg-white/10">1 Day Prediction</SelectItem>
+                    <SelectItem value="1week" className="text-white hover:bg-white/10">1 Week Prediction</SelectItem>
+                    <SelectItem value="1month" className="text-white hover:bg-white/10">1 Month Prediction</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <Button 
+                type="submit" 
+                className="w-full elite-card hover-glow text-xl py-6 rounded-xl font-bold transition-all duration-300 hover:scale-105 animate-gradient" 
+                disabled={loading}
+              >
+                <span className="golden-gradient-text">
+                  {loading ? "AI Analyzing..." : "Get AI Predictions"}
+                </span>
               </Button>
             </form>
-            {error && <div className="mt-4 text-red-400 font-semibold">{error}</div>}
+            
+            {error && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                className="mt-6 p-4 rounded-xl bg-gradient-to-r from-red-500/20 to-rose-500/20 border border-red-500/30 text-red-300"
+              >
+                <div className="font-semibold text-center">{error}</div>
+              </motion.div>
+            )}
+            
             {result && (
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="mt-8 p-6 rounded-xl bg-white/5 border border-white/10 shadow-lg">
-                <h3 className="text-xl font-bold gradient-text mb-2">Prediction Result</h3>
-                <div className="text-white/90 mb-2">
-                  <span className="font-semibold">Direction:</span> {result.finalPrediction?.direction || "-"}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                transition={{ duration: 0.5 }} 
+                className="mt-8 space-y-6"
+              >
+                <div className="premium-card p-6 hover-lift">
+                  <h3 className="text-2xl font-bold premium-gradient-text mb-6 text-center">AI Prediction Result</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div className="text-center p-4 glass-light rounded-xl border border-white/10">
+                      <p className="text-sm text-gray-400 uppercase tracking-wide mb-2">Direction</p>
+                      <p className={`text-2xl font-bold ${
+                        result.finalPrediction?.direction === 'UP' ? 'text-green-400' :
+                        result.finalPrediction?.direction === 'DOWN' ? 'text-red-400' : 'text-yellow-400'
+                      }`}>
+                        {result.finalPrediction?.direction || "ANALYZING"}
+                      </p>
+                    </div>
+                    
+                    <div className="text-center p-4 glass-light rounded-xl border border-white/10">
+                      <p className="text-sm text-gray-400 uppercase tracking-wide mb-2">Confidence</p>
+                      <p className="text-2xl font-bold text-blue-400">
+                        {result.confidence ? `${result.confidence}%` : "--"}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="glass-light rounded-xl p-6 border border-white/10">
+                    <p className="text-sm text-gray-400 uppercase tracking-wide mb-3">AI Reasoning</p>
+                    <p className="text-gray-300 leading-relaxed">
+                      {result.agents?.synth?.data?.reasoning?.chainOfThought || "Analysis reasoning will appear here..."}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-white/90 mb-2">
-                  <span className="font-semibold">Confidence:</span> {result.confidence ? `${result.confidence}%` : "-"}
-                </div>
-                <div className="text-white/80 text-sm mb-2">
-                  <span className="font-semibold">Reasoning:</span> {result.agents?.synth?.data?.reasoning?.chainOfThought || "-"}
-                </div>
+                
                 {!session && (
-                  <div className="mt-6 p-4 bg-blue-900/30 rounded-lg border border-blue-400/20 text-blue-100 text-center">
-                    <div className="font-bold mb-2">Want unlimited predictions and full features?</div>
-                    <Button onClick={() => signIn()} className="btn-primary px-6 py-2 rounded-lg text-base font-semibold">Sign Up Free</Button>
+                  <div className="elite-card p-6 text-center animate-glow">
+                    <div className="mb-4">
+                      <h4 className="text-xl font-bold golden-gradient-text mb-2">Unlock Full AI Power</h4>
+                      <p className="text-gray-300">Get unlimited predictions, full analysis reports, and premium features</p>
+                    </div>
+                    <Button 
+                      onClick={() => signIn()} 
+                      className="elite-card hover-glow px-8 py-3 text-lg font-bold rounded-xl transition-all duration-300 hover:scale-105"
+                    >
+                      <span className="golden-gradient-text">Sign Up Free</span>
+                    </Button>
                   </div>
                 )}
               </motion.div>
             )}
-          </CardContent>
-        </Card>
-      </motion.div>
-    </section>
+          </div>
+        </motion.div>
+      </div>
+    </div>
   );
 } 

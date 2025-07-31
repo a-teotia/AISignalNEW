@@ -473,223 +473,365 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/95 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-[#0a0b0d] via-[#0f1012] to-[#0a0b0d] relative overflow-hidden">
       {/* AI Processing Modal */}
       <AIFactsModal show={loading} />
-      {/* Background Effects */}
-      <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] pointer-events-none" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-      <div className="absolute top-1/2 left-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
       
-      {/* Header Section */}
-      <div className="relative z-10 p-6 border-b border-border/50">
+      {/* Premium Background Effects */}
+      <div className="absolute inset-0">
+        {/* Enhanced Grid Pattern with Depth */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.03)_1px,transparent_1px)] bg-[size:24px_24px]" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(147,51,234,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(147,51,234,0.02)_1px,transparent_1px)] bg-[size:48px_48px]" />
+        
+        {/* Multi-layer Premium Gradient Overlays */}
+        <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-blue-500/8 via-blue-500/3 to-transparent" />
+        <div className="absolute bottom-0 right-0 w-[500px] h-96 bg-gradient-radial from-purple-500/12 via-purple-500/4 to-transparent" />
+        <div className="absolute top-1/3 left-0 w-80 h-80 bg-gradient-radial from-emerald-500/10 via-emerald-500/3 to-transparent" />
+        <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-gradient-radial from-amber-500/8 via-transparent to-transparent" />
+        
+        {/* Enhanced Animated Particles System */}
+        <div className="absolute top-20 left-1/4 w-1 h-1 bg-blue-400/80 rounded-full animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+        <div className="absolute top-1/3 right-1/4 w-1 h-1 bg-emerald-400/80 rounded-full animate-pulse delay-700 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+        <div className="absolute bottom-1/4 left-1/3 w-1 h-1 bg-purple-400/80 rounded-full animate-pulse delay-1000 shadow-[0_0_10px_rgba(147,51,234,0.5)]" />
+        <div className="absolute top-1/2 left-1/2 w-1 h-1 bg-amber-400/60 rounded-full animate-pulse delay-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+        <div className="absolute bottom-1/3 right-1/4 w-1 h-1 bg-rose-400/60 rounded-full animate-pulse delay-1500 shadow-[0_0_8px_rgba(244,63,94,0.4)]" />
+        
+        {/* Subtle Moving Gradients */}
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-transparent via-blue-500/[0.01] to-transparent animate-pulse" style={{ animationDuration: '8s' }} />
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-tl from-transparent via-purple-500/[0.01] to-transparent animate-pulse" style={{ animationDuration: '12s', animationDelay: '4s' }} />
+      </div>
+      
+      {/* Dashboard Welcome Section - Simplified */}
+      <div className="relative z-10 p-6">
         <div className="max-w-7xl mx-auto">
           <motion.div 
-            className="flex items-center justify-between"
+            className="glass-premium rounded-2xl p-8 mb-6 shadow-premium"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <div>
-              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white via-white to-white/70 bg-clip-text text-transparent">
-                Welcome back, <span className="text-primary glow-text">{session?.user?.name || 'Trader'}</span>
-              </h1>
-              <p className="text-muted-foreground text-lg">Your AI-powered trading dashboard</p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2 glassmorphism rounded-xl px-4 py-2">
-                <Activity className="w-4 h-4 text-primary animate-pulse" />
-                <span className="text-sm font-medium text-white">Live</span>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
+              <div className="space-y-2">
+                <h1 className="text-3xl sm:text-4xl font-bold premium-gradient-text">
+                  Welcome back, <span className="golden-gradient-text">{session?.user?.name || 'Trader'}</span>
+                </h1>
+                <p className="text-gray-300 text-lg">Your world-class AI-powered trading command center</p>
               </div>
-              <Button variant="outline" size="sm" className="border-primary/30 text-primary hover:bg-primary/10 rounded-xl">
-                <Settings className="w-4 h-4 mr-2" />
-                Settings
-              </Button>
+              
+              <div className="flex items-center space-x-4">
+                {/* Enhanced Live Status */}
+                <div className="flex items-center space-x-3 bg-gradient-to-r from-green-500/20 via-emerald-500/20 to-green-500/20 backdrop-blur-sm rounded-xl px-4 py-2 border border-green-500/30 shadow-lg">
+                  <div className="relative">
+                    <Activity className="w-4 h-4 text-green-400 animate-pulse" />
+                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-ping" />
+                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-semibold text-green-300">LIVE</span>
+                    <p className="text-xs text-green-400/80">Real-time</p>
+                  </div>
+                </div>
+                
+                {/* Premium Market Status */}
+                <div className="bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-blue-500/20 backdrop-blur-sm rounded-xl px-4 py-2 border border-blue-500/30 shadow-lg">
+                  <div className="text-center">
+                    <span className="text-sm font-semibold text-blue-300">MARKETS</span>
+                    <p className="text-xs text-blue-400/80">Open</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </motion.div>
         </div>
       </div>
 
       {/* Main Dashboard Content */}
-      <div className="relative z-10 p-6">
+      <div className="relative z-10 px-6 pb-6">
         <div className="max-w-7xl mx-auto space-y-6">
           
-          {/* 🎯 SIMPLIFIED: Essential Stats Only */}
+          {/* Premium Market Intelligence Overview */}
           <motion.div 
-            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+            className="grid grid-cols-1 md:grid-cols-2 gap-8"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            {/* Market Mood - Simplified */}
-            <Card className="trading-card border-0 group">
-              <CardContent className="p-4">
+            {/* Enhanced Market Mood Card */}
+            <Card className="bg-gradient-to-br from-gray-900/50 via-gray-800/30 to-gray-900/50 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/20 group hover:shadow-3xl hover:shadow-black/30 transition-all duration-500 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <CardContent className="p-6 relative z-10">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm">Market Mood</p>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <span className="text-2xl">{marketMood?.emoji || '😐'}</span>
-                      <p className="text-lg font-bold" style={{ color: marketMood?.color || '#FFA500' }}>
-                        {marketMood?.mood || 'NEUTRAL'}
-                      </p>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                      <p className="text-blue-200/80 text-sm font-medium tracking-wide uppercase">Market Sentiment</p>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-700/50 to-gray-800/50 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-300">
+                        {marketMood?.emoji || '😐'}
+                      </div>
+                      <div>
+                        <p className="text-xl font-bold" style={{ color: marketMood?.color || '#FFA500' }}>
+                          {marketMood?.mood || 'NEUTRAL'}
+                        </p>
+                        <p className="text-xs text-gray-400">Current market mood</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-white">{marketMood?.bullishPercent || 50}%</p>
-                    <p className="text-xs text-muted-foreground">Bullish</p>
+                  <div className="text-right space-y-1">
+                    <p className="text-3xl font-bold bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">
+                      {marketMood?.bullishPercent || 50}%
+                    </p>
+                    <p className="text-xs text-gray-400 uppercase tracking-wide">Bullish Sentiment</p>
+                    <div className="w-16 h-1 bg-gray-700 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-1000"
+                        style={{ width: `${marketMood?.bullishPercent || 50}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Personal Stats - Combined */}
-            <Card className="trading-card border-0 group">
-              <CardContent className="p-4">
+            {/* Enhanced Performance Card */}
+            <Card className="bg-gradient-to-br from-gray-900/50 via-gray-800/30 to-gray-900/50 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/20 group hover:shadow-3xl hover:shadow-black/30 transition-all duration-500 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <CardContent className="p-6 relative z-10">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm">Your Performance</p>
-                    <div className="flex items-center space-x-4 mt-1">
-                      <div className="flex items-center space-x-1">
-                        <span className="text-lg font-bold text-white">{tradingScore}</span>
-                        <span className="text-xs text-muted-foreground">score</span>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                      <p className="text-emerald-200/80 text-sm font-medium tracking-wide uppercase">Your Performance</p>
+                    </div>
+                    <div className="flex items-center space-x-6">
+                      <div className="text-center">
+                        <div className="flex items-center space-x-1 mb-1">
+                          <span className="text-2xl font-bold bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">{tradingScore}</span>
+                          <span className="text-xs text-gray-400 uppercase tracking-wider">Score</span>
+                        </div>
+                        <div className="w-12 h-1 bg-gray-700 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-blue-500 to-purple-400 rounded-full transition-all duration-1000"
+                            style={{ width: `${tradingScore}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-1">
-                        <span className="text-lg font-bold text-orange-400">{winStreak}</span>
-                        <span className="text-xs text-muted-foreground">streak</span>
-                        {winStreak >= 5 && <span className="text-lg">🔥</span>}
+                      <div className="text-center">
+                        <div className="flex items-center space-x-1 mb-1">
+                          <span className="text-2xl font-bold text-orange-400">{winStreak}</span>
+                          <span className="text-xs text-gray-400 uppercase tracking-wider">Streak</span>
+                          {winStreak >= 5 && <span className="text-xl animate-bounce">🔥</span>}
+                        </div>
+                        <p className="text-xs text-orange-300/80">Win streak</p>
                       </div>
                     </div>
                   </div>
-                  <div className="text-2xl">
-                    {tradingScore >= 80 ? '🏆' : tradingScore >= 60 ? '⭐' : '📈'}
+                  <div className="text-right">
+                    <div className={`text-4xl mb-2 group-hover:scale-110 transition-transform duration-300 ${winStreak >= 5 ? 'animate-pulse' : ''}`}>
+                      {tradingScore >= 80 ? '🏆' : tradingScore >= 60 ? '⭐' : '📈'}
+                    </div>
+                    <p className="text-xs text-gray-400 uppercase tracking-wide">
+                      {tradingScore >= 80 ? 'Elite' : tradingScore >= 60 ? 'Advanced' : 'Growing'}
+                    </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
 
-          {/* 🎯 SIMPLIFIED: Only High-Priority Alerts */}
+          {/* Premium Smart Alerts Banner */}
           {alerts.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="mb-2"
+              className="mb-8"
             >
-              <div className="flex items-center space-x-4 overflow-x-auto pb-2">
-                {alerts.slice(0, 2).map((alert, index) => (
-                  <div
-                    key={alert.id}
-                    className="flex items-center space-x-2 bg-gray-800/50 rounded-lg px-4 py-2 border border-gray-700 whitespace-nowrap"
-                  >
-                    <span className="text-lg">{alert.icon}</span>
-                    <span className="text-sm font-medium text-white">{alert.title}</span>
+              <div className="bg-gradient-to-r from-gray-900/60 via-gray-800/40 to-gray-900/60 backdrop-blur-xl rounded-2xl border border-white/10 p-4 shadow-xl">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+                    <span className="text-sm font-semibold text-amber-200 uppercase tracking-wide">Smart Alerts</span>
                   </div>
-                ))}
+                  <span className="text-xs text-gray-400">{alerts.length} active</span>
+                </div>
+                <div className="flex items-center space-x-4 overflow-x-auto pb-1">
+                  {alerts.slice(0, 3).map((alert, index) => (
+                    <motion.div
+                      key={alert.id}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="flex items-center space-x-3 bg-gradient-to-r from-gray-800/60 to-gray-700/40 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/10 whitespace-nowrap shadow-lg hover:shadow-xl transition-all duration-300 group"
+                    >
+                      <div className="text-xl group-hover:scale-110 transition-transform duration-300">{alert.icon}</div>
+                      <div>
+                        <span className="text-sm font-semibold text-white">{alert.title}</span>
+                        <p className="text-xs text-gray-300 max-w-40 truncate">{alert.message}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
               </div>
             </motion.div>
           )}
           
-          {/* Quick Stats Row */}
+          {/* Premium Analytics Dashboard */}
           <motion.div 
-            className="grid grid-cols-1 md:grid-cols-4 gap-6"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <Card className="trading-card border-0 group">
-              <CardContent className="p-6">
+            {/* Today's Signals Card */}
+            <Card className="bg-gradient-to-br from-emerald-900/20 via-green-900/10 to-emerald-900/20 backdrop-blur-xl border border-emerald-500/20 shadow-xl shadow-emerald-500/10 group hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-500 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <CardContent className="p-6 relative z-10">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm">Today's Signals</p>
-                    <p className="text-3xl font-bold text-white mt-2">12</p>
+                  <div className="space-y-2">
+                    <p className="text-emerald-200/80 text-sm font-medium tracking-wide uppercase">Today's Signals</p>
+                    <p className="text-4xl font-bold bg-gradient-to-r from-white to-emerald-100 bg-clip-text text-transparent">12</p>
+                    <div className="flex items-center space-x-1 text-xs text-emerald-300">
+                      <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />
+                      <span>+3 from yesterday</span>
+                    </div>
                   </div>
-                  <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <TrendingUp className="w-6 h-6 text-green-400" />
+                  <div className="w-14 h-14 bg-gradient-to-br from-emerald-500/20 to-green-500/20 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+                    <TrendingUp className="w-7 h-7 text-emerald-400" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="trading-card border-0 group">
-              <CardContent className="p-6">
+            {/* Accuracy Rate Card */}
+            <Card className="bg-gradient-to-br from-blue-900/20 via-indigo-900/10 to-blue-900/20 backdrop-blur-xl border border-blue-500/20 shadow-xl shadow-blue-500/10 group hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-500 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <CardContent className="p-6 relative z-10">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm">Accuracy Rate</p>
-                    <p className="text-3xl font-bold text-white mt-2">87.5%</p>
+                  <div className="space-y-2">
+                    <p className="text-blue-200/80 text-sm font-medium tracking-wide uppercase">Accuracy Rate</p>
+                    <p className="text-4xl font-bold bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">87.5%</p>
+                    <div className="w-20 h-2 bg-gray-700/50 rounded-full overflow-hidden">
+                      <div className="h-full w-[87.5%] bg-gradient-to-r from-blue-500 to-indigo-400 rounded-full" />
+                    </div>
                   </div>
-                  <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Target className="w-6 h-6 text-blue-400" />
+                  <div className="w-14 h-14 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+                    <Target className="w-7 h-7 text-blue-400" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="trading-card border-0 group">
-              <CardContent className="p-6">
+            {/* Total Profit Card */}
+            <Card className="bg-gradient-to-br from-green-900/20 via-emerald-900/10 to-green-900/20 backdrop-blur-xl border border-green-500/20 shadow-xl shadow-green-500/10 group hover:shadow-2xl hover:shadow-green-500/20 transition-all duration-500 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <CardContent className="p-6 relative z-10">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm">Total Profit</p>
-                    <p className="text-3xl font-bold text-green-400 mt-2">+$2,847</p>
+                  <div className="space-y-2">
+                    <p className="text-green-200/80 text-sm font-medium tracking-wide uppercase">Total Profit</p>
+                    <p className="text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-300 bg-clip-text text-transparent">+$2,847</p>
+                    <div className="flex items-center space-x-1 text-xs text-green-300">
+                      <div className="w-1 h-1 bg-green-400 rounded-full animate-pulse" />
+                      <span>+12.4% this month</span>
+                    </div>
                   </div>
-                  <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <DollarSign className="w-6 h-6 text-green-400" />
+                  <div className="w-14 h-14 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+                    <DollarSign className="w-7 h-7 text-green-400" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="trading-card border-0 group">
-              <CardContent className="p-6">
+            {/* Active Signals Card */}
+            <Card className="bg-gradient-to-br from-purple-900/20 via-violet-900/10 to-purple-900/20 backdrop-blur-xl border border-purple-500/20 shadow-xl shadow-purple-500/10 group hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-violet-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <CardContent className="p-6 relative z-10">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-sm">Active Signals</p>
-                    <p className="text-3xl font-bold text-white mt-2">8</p>
+                  <div className="space-y-2">
+                    <p className="text-purple-200/80 text-sm font-medium tracking-wide uppercase">Active Signals</p>
+                    <p className="text-4xl font-bold bg-gradient-to-r from-white to-purple-100 bg-clip-text text-transparent">8</p>
+                    <div className="flex items-center space-x-1 text-xs text-purple-300">
+                      <div className="w-1 h-1 bg-purple-400 rounded-full animate-pulse" />
+                      <span>2 high confidence</span>
+                    </div>
                   </div>
-                  <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Zap className="w-6 h-6 text-primary" />
+                  <div className="w-14 h-14 bg-gradient-to-br from-purple-500/20 to-violet-500/20 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+                    <Zap className="w-7 h-7 text-purple-400" />
                   </div>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
 
-          {/* Trading Style Presets */}
+          {/* Premium Trading Style Selection */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
           >
-            <Card className="trading-card border-0">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center text-xl">
-                  <Target className="w-6 h-6 mr-3 text-primary" />
-                  Trading Style
-                </CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  Select your preferred trading approach
-                </CardDescription>
+            <Card className="bg-gradient-to-br from-gray-900/50 via-gray-800/30 to-gray-900/50 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/20 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/3 via-transparent to-purple-500/3" />
+              <CardHeader className="relative z-10">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl flex items-center justify-center">
+                    <Target className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-white text-2xl font-bold bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">
+                      Trading Strategy
+                    </CardTitle>
+                    <CardDescription className="text-gray-300">
+                      Select your preferred trading approach and timeframe
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <CardContent className="relative z-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {tradingStyles.map((style) => {
                     const Icon = style.icon;
+                    const isSelected = selectedTradingStyle === style.id;
                     return (
                       <motion.button
                         key={style.id}
                         onClick={() => setSelectedTradingStyle(style.id)}
-                        className={`p-6 rounded-xl border-2 transition-all duration-300 text-left group ${
-                          selectedTradingStyle === style.id
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-border bg-card hover:border-primary/30 hover:bg-primary/5 text-white'
+                        className={`relative p-6 rounded-2xl border-2 transition-all duration-500 text-left group overflow-hidden ${
+                          isSelected
+                            ? 'border-blue-500/50 bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-purple-500/20 shadow-lg shadow-blue-500/25'
+                            : 'border-white/10 bg-gradient-to-br from-gray-800/50 to-gray-700/30 hover:border-blue-500/30 hover:bg-gradient-to-br hover:from-blue-500/10 hover:to-purple-500/10'
                         }`}
-                        whileHover={{ scale: 1.02 }}
+                        whileHover={{ scale: 1.02, y: -2 }}
                         whileTap={{ scale: 0.98 }}
                       >
-                        <Icon className="w-8 h-8 mb-3 group-hover:scale-110 transition-transform" />
-                        <h3 className="font-semibold text-base mb-1">{style.name}</h3>
-                        <p className="text-xs text-muted-foreground">{style.description}</p>
+                        {isSelected && (
+                          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-purple-500/10 animate-pulse" />
+                        )}
+                        <div className="relative z-10">
+                          <div className={`w-12 h-12 rounded-xl mb-4 flex items-center justify-center transition-all duration-300 ${
+                            isSelected 
+                              ? 'bg-gradient-to-br from-blue-500/30 to-purple-500/30 shadow-lg' 
+                              : 'bg-gradient-to-br from-gray-700/50 to-gray-600/50 group-hover:from-blue-500/20 group-hover:to-purple-500/20'
+                          }`}>
+                            <Icon className={`w-6 h-6 transition-all duration-300 group-hover:scale-110 ${
+                              isSelected ? 'text-blue-300' : 'text-gray-300 group-hover:text-blue-400'
+                            }`} />
+                          </div>
+                          <h3 className={`font-bold text-lg mb-2 transition-colors duration-300 ${
+                            isSelected ? 'text-blue-300' : 'text-white group-hover:text-blue-300'
+                          }`}>
+                            {style.name}
+                          </h3>
+                          <p className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors duration-300">
+                            {style.description}
+                          </p>
+                          {isSelected && (
+                            <div className="mt-3 flex items-center space-x-1">
+                              <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse" />
+                              <span className="text-xs text-blue-300 font-medium uppercase tracking-wide">Selected</span>
+                            </div>
+                          )}
+                        </div>
                       </motion.button>
                     );
                   })}
@@ -698,60 +840,89 @@ export default function Dashboard() {
             </Card>
           </motion.div>
 
-          {/* Asset Selection */}
+          {/* Premium Asset Selection Interface */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
           >
-            <Card className="trading-card border-0">
-              <CardHeader>
-                <CardTitle className="text-white text-xl flex items-center">
-                  <BarChart3 className="w-6 h-6 mr-3 text-primary" />
-                  Asset Selection
-                </CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  Choose from popular assets across different markets
-                </CardDescription>
+            <Card className="bg-gradient-to-br from-gray-900/50 via-gray-800/30 to-gray-900/50 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/20 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/3 via-transparent to-blue-500/3" />
+              <CardHeader className="relative z-10">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl flex items-center justify-center">
+                    <BarChart3 className="w-6 h-6 text-purple-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-white text-2xl font-bold bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">
+                      Asset Universe
+                    </CardTitle>
+                    <CardDescription className="text-gray-300">
+                      Choose from premium assets across global markets
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {/* Category Tabs */}
-                  <div className="flex space-x-2">
-                    {Object.keys(popularAssets).map((category) => (
-                      <motion.button
-                        key={category}
-                        onClick={() => setSelectedAssetCategory(category)}
-                        className={`px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
-                          selectedAssetCategory === category
-                            ? 'bg-primary text-white shadow-lg'
-                            : 'bg-card text-muted-foreground hover:bg-primary/10 hover:text-primary'
-                        }`}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        {category.charAt(0).toUpperCase() + category.slice(1)}
-                      </motion.button>
-                    ))}
+              <CardContent className="relative z-10">
+                <div className="space-y-8">
+                  {/* Enhanced Category Tabs */}
+                  <div className="flex space-x-2 p-1 bg-gradient-to-r from-gray-800/60 to-gray-700/40 rounded-2xl backdrop-blur-sm">
+                    {Object.keys(popularAssets).map((category) => {
+                      const isSelected = selectedAssetCategory === category;
+                      return (
+                        <motion.button
+                          key={category}
+                          onClick={() => setSelectedAssetCategory(category)}
+                          className={`flex-1 px-6 py-4 rounded-xl text-sm font-bold transition-all duration-500 relative overflow-hidden ${
+                            isSelected
+                              ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-xl shadow-purple-500/25'
+                              : 'text-gray-300 hover:text-white hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-blue-500/20'
+                          }`}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          {isSelected && (
+                            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-blue-500/20 animate-pulse" />
+                          )}
+                          <span className="relative z-10 uppercase tracking-wide">
+                            {category.charAt(0).toUpperCase() + category.slice(1)}
+                          </span>
+                        </motion.button>
+                      );
+                    })}
                   </div>
 
-                  {/* Asset Tags */}
-                  <div className="flex flex-wrap gap-3">
-                    {popularAssets[selectedAssetCategory as keyof typeof popularAssets].map((asset) => (
-                      <motion.button
-                        key={asset}
-                        onClick={() => setSymbol(asset)}
-                        className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
-                          symbol === asset
-                            ? 'bg-primary text-white shadow-lg'
-                            : 'bg-card text-white hover:bg-primary/20 hover:text-primary border border-border'
-                        }`}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        {asset}
-                      </motion.button>
-                    ))}
+                  {/* Enhanced Asset Selection Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    {popularAssets[selectedAssetCategory as keyof typeof popularAssets].map((asset) => {
+                      const isSelected = symbol === asset;
+                      return (
+                        <motion.button
+                          key={asset}
+                          onClick={() => setSymbol(asset)}
+                          className={`relative p-4 rounded-xl font-bold text-sm transition-all duration-500 group overflow-hidden ${
+                            isSelected
+                              ? 'bg-gradient-to-br from-blue-500/30 via-blue-500/20 to-purple-500/30 text-blue-300 border-2 border-blue-500/50 shadow-lg shadow-blue-500/25'
+                              : 'bg-gradient-to-br from-gray-800/60 to-gray-700/40 text-gray-300 border-2 border-white/10 hover:border-blue-500/30 hover:bg-gradient-to-br hover:from-blue-500/20 hover:to-purple-500/20 hover:text-blue-300'
+                          }`}
+                          whileHover={{ scale: 1.05, y: -2 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          {isSelected && (
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-purple-500/10 animate-pulse" />
+                          )}
+                          <div className="relative z-10 text-center">
+                            <div className="text-lg font-bold mb-1">{asset}</div>
+                            {isSelected && (
+                              <div className="flex items-center justify-center space-x-1">
+                                <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse" />
+                                <span className="text-xs text-blue-300 uppercase tracking-wider">Selected</span>
+                              </div>
+                            )}
+                          </div>
+                        </motion.button>
+                      );
+                    })}
                   </div>
                 </div>
               </CardContent>
@@ -770,36 +941,45 @@ export default function Dashboard() {
             />
           </motion.div>
 
-          {/* Recent Sequential Analyses */}
+          {/* Premium Analysis History */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
           >
-            <Card className="trading-card border-0">
-              <CardHeader>
+            <Card className="bg-gradient-to-br from-gray-900/50 via-gray-800/30 to-gray-900/50 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/20 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-violet-500/3 via-transparent to-blue-500/3" />
+              <CardHeader className="relative z-10">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-white flex items-center text-xl">
-                      <Activity className="w-6 h-6 mr-3 text-primary animate-pulse" />
-                      Recent Sequential Analyses
-                    </CardTitle>
-                    <CardDescription className="text-muted-foreground">
-                      Your recent 5-agent sequential analysis results with citations
-                    </CardDescription>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-violet-500/20 to-blue-500/20 rounded-xl flex items-center justify-center">
+                      <Activity className="w-6 h-6 text-violet-400 animate-pulse" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-white text-2xl font-bold bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">
+                        Analysis History
+                      </CardTitle>
+                      <CardDescription className="text-gray-300">
+                        Recent AI-powered sequential analysis results with full transparency
+                      </CardDescription>
+                    </div>
                   </div>
                   {recentAnalyses.length > itemsPerPage && (
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-sm text-violet-300 bg-gradient-to-r from-violet-500/20 to-blue-500/20 px-3 py-1 rounded-lg backdrop-blur-sm">
                       {startIndex + 1}-{Math.min(endIndex, recentAnalyses.length)} of {recentAnalyses.length}
                     </div>
                   )}
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="relative z-10">
+                <div className="space-y-6">
                   {recentAnalyses.length === 0 ? (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">No recent analyses yet. Run your first sequential analysis above!</p>
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-700/50 to-gray-600/30 rounded-2xl flex items-center justify-center">
+                        <Activity className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <p className="text-gray-400 text-lg">No recent analyses yet</p>
+                      <p className="text-gray-500 text-sm mt-2">Run your first sequential analysis above to see results here!</p>
                     </div>
                   ) : (
                     currentAnalyses.map((analysis: any, index) => (
@@ -808,57 +988,74 @@ export default function Dashboard() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5, delay: index * 0.1 }}
-                        className="glassmorphism rounded-xl p-6 hover:border-primary/30 transition-all duration-300 group"
+                        className="bg-gradient-to-r from-gray-800/60 to-gray-700/40 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:border-violet-500/30 transition-all duration-500 group shadow-lg hover:shadow-xl"
                       >
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center justify-between mb-6">
                           <div className="flex items-center space-x-4">
-                            <div className="p-2 rounded-lg bg-primary/10">
+                            <div className={`p-3 rounded-xl shadow-lg ${
+                              analysis.verdict === 'BUY' || analysis.verdict === 'UP' ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/20' :
+                              analysis.verdict === 'SELL' || analysis.verdict === 'DOWN' ? 'bg-gradient-to-br from-red-500/20 to-rose-500/20' :
+                              'bg-gradient-to-br from-gray-500/20 to-gray-600/20'
+                            }`}>
                               {getDirectionIcon(analysis.verdict)}
                             </div>
                             <div>
-                              <h3 className="font-bold text-white text-lg">{analysis.symbol}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                {analysis.agentChain?.join(' → ') || '5-Agent Analysis'}
-                              </p>
+                              <h3 className="font-bold text-white text-xl mb-1">{analysis.symbol}</h3>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-1 h-1 bg-violet-400 rounded-full animate-pulse" />
+                                <p className="text-sm text-violet-300 font-medium">
+                                  {analysis.agentChain?.join(' → ') || '6-Agent Sequential Analysis'}
+                                </p>
+                              </div>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className={`text-xl font-bold ${getDirectionColor(analysis.verdict)} group-hover:scale-110 transition-transform`}>
+                          <div className="text-right space-y-1">
+                            <div className={`text-2xl font-bold group-hover:scale-110 transition-transform duration-300 ${
+                              analysis.verdict === 'BUY' || analysis.verdict === 'UP' ? 'text-green-400' :
+                              analysis.verdict === 'SELL' || analysis.verdict === 'DOWN' ? 'text-red-400' :
+                              'text-gray-400'
+                            }`}>
                               {analysis.verdict}
                             </div>
-                            <div className="text-sm text-muted-foreground">{analysis.confidence}% confidence</div>
+                            <div className="text-sm text-gray-300">{analysis.confidence}% confidence</div>
+                            <div className="w-16 h-1 bg-gray-700 rounded-full overflow-hidden ml-auto">
+                              <div 
+                                className="h-full bg-gradient-to-r from-violet-500 to-blue-400 rounded-full transition-all duration-1000"
+                                style={{ width: `${analysis.confidence}%` }}
+                              />
+                            </div>
                           </div>
                         </div>
 
-                        <div className="mb-4">
-                          <div className="bg-card/50 rounded-xl p-4 border border-border/50">
-                            <p className="text-xs text-muted-foreground mb-2">Analysis Summary</p>
-                            <p className="text-white text-sm line-clamp-2">{analysis.reasoning}</p>
+                        <div className="mb-5">
+                          <div className="bg-gradient-to-br from-gray-700/30 to-gray-600/20 rounded-xl p-4 border border-white/5 backdrop-blur-sm">
+                            <p className="text-xs text-violet-300 mb-2 uppercase tracking-wide font-medium">Analysis Summary</p>
+                            <p className="text-white text-sm leading-relaxed line-clamp-2">{analysis.reasoning}</p>
                           </div>
                         </div>
 
                         {analysis.priceTarget && (
-                          <div className="mb-4">
-                            <div className="bg-primary/10 rounded-xl p-4 border border-primary/20">
-                              <p className="text-xs text-primary mb-1">Price Target</p>
-                              <p className="font-bold text-primary text-lg">${analysis.priceTarget}</p>
+                          <div className="mb-5">
+                            <div className="bg-gradient-to-br from-blue-500/15 to-purple-500/15 rounded-xl p-4 border border-blue-500/20 backdrop-blur-sm">
+                              <p className="text-xs text-blue-300 mb-1 uppercase tracking-wide font-medium">Price Target</p>
+                              <p className="font-bold text-blue-400 text-xl">${analysis.priceTarget}</p>
                             </div>
                           </div>
                         )}
 
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-500/20 text-green-400 border-green-500/30">
-                              Sequential Analysis
+                          <div className="flex items-center space-x-4">
+                            <span className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-violet-500/20 to-blue-500/20 text-violet-300 border border-violet-500/30 backdrop-blur-sm">
+                              AI SEQUENTIAL
                             </span>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs text-gray-400">
                               {new Date(analysis.timestamp).toLocaleString()}
                             </span>
                           </div>
                           <Button 
                             size="sm" 
                             variant="outline" 
-                            className="border-primary/30 text-primary hover:bg-primary/10 rounded-xl"
+                            className="bg-gradient-to-r from-violet-500/10 to-blue-500/10 border-violet-500/30 text-violet-300 hover:bg-gradient-to-r hover:from-violet-500/20 hover:to-blue-500/20 hover:border-violet-400/50 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl"
                             onClick={() => {
                               console.log('Full analysis data:', analysis);
                               console.log('Full analysis object:', analysis.fullAnalysis);
@@ -928,118 +1125,180 @@ export default function Dashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
           >
-            {/* Sequential Agent Chain */}
-            <Card className="trading-card border-0">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center text-xl">
-                  <Users className="w-6 h-6 mr-3 text-primary" />
-                  Sequential Agent Chain
-                </CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  5-agent sequential analysis with compound intelligence
-                </CardDescription>
+            {/* Premium Sequential Agent Chain */}
+            <Card className="bg-gradient-to-br from-gray-900/50 via-gray-800/30 to-gray-900/50 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/20 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/3 via-transparent to-blue-500/3" />
+              <CardHeader className="relative z-10">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-emerald-500/20 to-blue-500/20 rounded-xl flex items-center justify-center">
+                    <Users className="w-6 h-6 text-emerald-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-white text-2xl font-bold bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">
+                      AI Agent Pipeline
+                    </CardTitle>
+                    <CardDescription className="text-gray-300">
+                      6-agent sequential analysis with compound intelligence
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="relative z-10">
                 <div className="space-y-4">
                   {sequentialAnalysisResult ? (
                     // Show actual agent chain from latest analysis
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {sequentialAnalysisResult.agentChain?.map((agent: string, index: number) => (
-                        <div key={agent} className="flex items-center space-x-4 p-4 rounded-xl bg-card/30 border border-border/50">
-                          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
+                        <motion.div 
+                          key={agent} 
+                          className="flex items-center space-x-4 p-5 rounded-2xl bg-gradient-to-r from-gray-800/60 to-gray-700/40 backdrop-blur-sm border border-white/10 group hover:border-emerald-500/30 transition-all duration-300"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/30 to-blue-500/30 flex items-center justify-center text-emerald-300 font-bold text-sm shadow-lg group-hover:scale-110 transition-transform duration-300">
                             {index + 1}
                           </div>
                           <div className="flex-1">
-                            <h4 className="text-white font-semibold">{agent}</h4>
-                            <p className="text-xs text-muted-foreground">
-                              {index === 0 && "Real market data analysis"}
-                              {index === 1 && "Internet research & fundamentals"}
-                              {index === 2 && "Technical analysis integration"}
-                              {index === 3 && "Sentiment & news analysis"}
-                              {index === 4 && "Final synthesis & report"}
+                            <h4 className="text-white font-bold text-base mb-1">{agent}</h4>
+                            <p className="text-sm text-gray-300">
+                              {index === 0 && "🔢 Real market data & quantitative analysis"}
+                              {index === 1 && "🌐 Internet research & fundamental insights"}
+                              {index === 2 && "📊 Technical patterns & chart analysis"}
+                              {index === 3 && "📰 Sentiment & news analysis"}
+                              {index === 4 && "🏛️ Fundamental analysis & earnings data"}
+                              {index === 5 && "🎯 Final synthesis & comprehensive report"}
                             </p>
                           </div>
-                          <div className="text-primary">
+                          <div className="text-emerald-400 text-xl group-hover:scale-110 transition-transform duration-300">
                             {index < sequentialAnalysisResult.agentChain.length - 1 && "→"}
                           </div>
-                        </div>
+                        </motion.div>
                       ))}
                     </div>
                   ) : (
                     // Show default sequential agent chain
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {[
-                        { name: "Quantitative Analysis", desc: "Real market data & technical indicators" },
-                        { name: "Market Analysis", desc: "Internet research & fundamentals" },
-                        { name: "Technical Analysis", desc: "Chart patterns & signals" },
-                        { name: "Sentiment Analysis", desc: "News & social sentiment" },
-                        { name: "Final Synthesis", desc: "Comprehensive report with citations" }
+                        { name: "Quantitative Analysis", desc: "🔢 Real market data & technical indicators", color: "from-blue-500/20 to-indigo-500/20" },
+                        { name: "Market Analysis", desc: "🌐 Internet research & fundamental insights", color: "from-emerald-500/20 to-green-500/20" },
+                        { name: "Technical Analysis", desc: "📊 Chart patterns & technical signals", color: "from-purple-500/20 to-violet-500/20" },
+                        { name: "Sentiment Analysis", desc: "📰 News & social sentiment analysis", color: "from-amber-500/20 to-orange-500/20" },
+                        { name: "Fundamental Analysis", desc: "🏛️ Earnings & corporate fundamentals", color: "from-rose-500/20 to-pink-500/20" },
+                        { name: "Final Synthesis", desc: "🎯 Comprehensive report with citations", color: "from-emerald-500/20 to-blue-500/20" }
                       ].map((agent, index) => (
-                        <div key={agent.name} className="flex items-center space-x-4 p-4 rounded-xl bg-card/30 border border-border/50">
-                          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
+                        <motion.div 
+                          key={agent.name} 
+                          className="flex items-center space-x-4 p-5 rounded-2xl bg-gradient-to-r from-gray-800/60 to-gray-700/40 backdrop-blur-sm border border-white/10 group hover:border-emerald-500/30 transition-all duration-300"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                        >
+                          <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${agent.color} flex items-center justify-center text-white font-bold text-sm shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                             {index + 1}
                           </div>
                           <div className="flex-1">
-                            <h4 className="text-white font-semibold">{agent.name}</h4>
-                            <p className="text-xs text-muted-foreground">{agent.desc}</p>
+                            <h4 className="text-white font-bold text-base mb-1">{agent.name}</h4>
+                            <p className="text-sm text-gray-300">{agent.desc}</p>
                           </div>
-                          <div className="text-primary">
-                            {index < 4 && "→"}
+                          <div className="text-emerald-400 text-xl group-hover:scale-110 transition-transform duration-300">
+                            {index < 5 && "→"}
                           </div>
-                        </div>
+                        </motion.div>
                       ))}
                     </div>
                   )}
                 </div>
                 
-                <div className="mt-6 p-4 rounded-xl bg-primary/10 border border-primary/20">
-                  <h4 className="text-primary font-semibold mb-2">Why Sequential Analysis?</h4>
-                  <p className="text-sm text-white">Each agent builds on the previous one's insights, creating compound intelligence and higher accuracy than parallel processing.</p>
+                <div className="mt-8 p-6 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-blue-500/5 to-emerald-500/10 border border-emerald-500/20 backdrop-blur-sm">
+                  <h4 className="text-emerald-300 font-bold text-lg mb-3 flex items-center">
+                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse mr-2" />
+                    Why Sequential Intelligence?
+                  </h4>
+                  <p className="text-gray-200 text-sm leading-relaxed">
+                    Each AI agent builds upon the previous one's insights, creating compound intelligence that delivers higher accuracy than parallel processing. This cascading approach ensures comprehensive analysis across all market dimensions.
+                  </p>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Performance Chart */}
-            <Card className="trading-card border-0">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center text-xl">
-                  <BarChart3 className="w-6 h-6 mr-3 text-primary" />
-                  Performance Trend
-                </CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  Your accuracy and profit trends over time
-                </CardDescription>
+            {/* Premium Performance Analytics */}
+            <Card className="bg-gradient-to-br from-gray-900/50 via-gray-800/30 to-gray-900/50 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/20 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/3 via-transparent to-purple-500/3" />
+              <CardHeader className="relative z-10">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl flex items-center justify-center">
+                    <BarChart3 className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-white text-2xl font-bold bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">
+                      Performance Analytics
+                    </CardTitle>
+                    <CardDescription className="text-gray-300">
+                      Advanced accuracy and profit trend analysis
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="h-64">
+              <CardContent className="relative z-10">
+                {/* Enhanced Performance Metrics */}
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="text-center p-4 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20">
+                    <p className="text-2xl font-bold text-green-400 mb-1">{performanceMetrics?.accuracy_rate?.toFixed(1) || '87.5'}%</p>
+                    <p className="text-xs text-green-300 uppercase tracking-wide">Accuracy</p>
+                  </div>
+                  <div className="text-center p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20">
+                    <p className="text-2xl font-bold text-blue-400 mb-1">{performanceMetrics?.total_predictions || '156'}</p>
+                    <p className="text-xs text-blue-300 uppercase tracking-wide">Signals</p>
+                  </div>
+                  <div className="text-center p-4 rounded-xl bg-gradient-to-br from-purple-500/10 to-violet-500/10 border border-purple-500/20">
+                    <p className="text-2xl font-bold text-purple-400 mb-1">{performanceMetrics?.win_rate?.toFixed(1) || '73.2'}%</p>
+                    <p className="text-xs text-purple-300 uppercase tracking-wide">Win Rate</p>
+                  </div>
+                </div>
+                
+                {/* Enhanced Chart Area */}
+                <div className="h-72 p-4 rounded-2xl bg-gradient-to-br from-gray-800/30 to-gray-700/20 border border-white/5 backdrop-blur-sm">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={accuracyTrends}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(59, 130, 246, 0.1)" />
+                      <defs>
+                        <linearGradient id="accuracyGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
                       <XAxis 
                         dataKey="date" 
-                        stroke="rgba(255,255,255,0.6)"
-                        fontSize={12}
+                        stroke="rgba(255,255,255,0.4)"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
                       />
                       <YAxis 
-                        stroke="rgba(255,255,255,0.6)"
-                        fontSize={12}
+                        stroke="rgba(255,255,255,0.4)"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
                       />
                       <Tooltip 
                         contentStyle={{ 
                           backgroundColor: 'rgba(17, 17, 19, 0.95)', 
                           border: '1px solid rgba(59, 130, 246, 0.3)',
-                          borderRadius: '12px',
+                          borderRadius: '16px',
                           color: 'white',
-                          backdropFilter: 'blur(20px)'
+                          backdropFilter: 'blur(20px)',
+                          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)'
                         }}
                       />
                       <Line 
                         type="monotone" 
                         dataKey="accuracy" 
-                        stroke="#3b82f6" 
+                        stroke="url(#accuracyGradient)" 
                         strokeWidth={3}
-                        dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
-                        activeDot={{ r: 6, stroke: '#3b82f6', strokeWidth: 2 }}
+                        fill="url(#accuracyGradient)"
+                        dot={{ fill: '#3b82f6', strokeWidth: 3, r: 5, stroke: '#1e40af' }}
+                        activeDot={{ r: 8, stroke: '#3b82f6', strokeWidth: 3, fill: '#60a5fa' }}
                       />
                     </LineChart>
                   </ResponsiveContainer>

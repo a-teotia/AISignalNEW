@@ -108,18 +108,36 @@
   --sidebar-ring: #3b82f6;
 }
 
-/* Additional custom properties for trading UI */
+/* Premium World-Class Trading UI Properties */
 :root {
-  /* Gradients */
+  /* Premium Gradients */
   --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --gradient-success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
   --gradient-danger: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
   --gradient-card: linear-gradient(145deg, #111113 0%, #1a1a1c 100%);
+  --gradient-premium: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  --gradient-golden: linear-gradient(135deg, #ffd700 0%, #ffb347 50%, #ff8c00 100%);
+  --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
   
-  /* Shadows */
+  /* World-Class Shadows */
   --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.15);
   --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.25);
   --shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --shadow-premium: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+  --shadow-glow-blue: 0 0 30px rgba(59, 130, 246, 0.3);
+  --shadow-glow-purple: 0 0 30px rgba(147, 51, 234, 0.3);
+  --shadow-glow-emerald: 0 0 30px rgba(16, 185, 129, 0.3);
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+  
+  /* Premium Blurs */
+  --blur-glass: blur(20px);
+  --blur-heavy: blur(40px);
+  --blur-light: blur(8px);
+  
+  /* Animation Curves */
+  --ease-premium: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --ease-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 /* Global styles */
@@ -131,6 +149,10 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-feature-settings: "rlig" 1, "calt" 1;
+  font-smooth: always;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* Custom scrollbar */
@@ -152,19 +174,80 @@ body {
   background: var(--foreground);
 }
 
-/* Trading specific classes */
+/* Premium Trading UI Components */
 .trading-card {
   background: var(--gradient-card);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(10px);
+  transition: all 0.3s var(--ease-premium);
 }
 
 .trading-card:hover {
   border-color: var(--primary);
   box-shadow: var(--shadow-glow);
   transform: translateY(-2px);
-  transition: all 0.3s ease;
+}
+
+.premium-card {
+  background: linear-gradient(135deg, 
+    rgba(17, 17, 19, 0.9) 0%, 
+    rgba(23, 23, 25, 0.8) 50%, 
+    rgba(17, 17, 19, 0.9) 100%);
+  backdrop-filter: blur(20px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-premium);
+  transition: all 0.5s var(--ease-premium);
+}
+
+.premium-card:hover {
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: var(--shadow-premium), var(--shadow-glow-blue);
+  transform: translateY(-4px) scale(1.01);
+}
+
+.elite-card {
+  background: linear-gradient(135deg, 
+    rgba(59, 130, 246, 0.05) 0%, 
+    rgba(147, 51, 234, 0.05) 50%, 
+    rgba(59, 130, 246, 0.05) 100%);
+  backdrop-filter: blur(24px) saturate(1.8) brightness(1.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: var(--shadow-premium), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.elite-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(255, 255, 255, 0.03), 
+    transparent);
+  transition: left 0.5s;
+}
+
+.elite-card:hover::before {
+  left: 100%;
+}
+
+.premium-gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.golden-gradient-text {
+  background: linear-gradient(135deg, #ffd700 0%, #ffb347 50%, #ff8c00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .prediction-bullish {
@@ -186,25 +269,95 @@ body {
   text-shadow: 0 0 20px currentColor;
 }
 
+.premium-glow-text {
+  text-shadow: 
+    0 0 10px rgba(59, 130, 246, 0.5),
+    0 0 20px rgba(59, 130, 246, 0.3),
+    0 0 30px rgba(59, 130, 246, 0.2);
+}
+
+.elite-glow-text {
+  text-shadow: 
+    0 0 5px rgba(255, 255, 255, 0.8),
+    0 0 10px rgba(59, 130, 246, 0.6),
+    0 0 15px rgba(147, 51, 234, 0.4),
+    0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+/* Premium Glassmorphism Effects */
 .glassmorphism {
   background: rgba(17, 17, 19, 0.8);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Animation classes */
+.glass-heavy {
+  background: rgba(15, 15, 17, 0.85);
+  backdrop-filter: blur(40px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: var(--shadow-premium);
+}
+
+.glass-light {
+  background: rgba(17, 17, 19, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-premium {
+  background: linear-gradient(135deg, 
+    rgba(59, 130, 246, 0.1) 0%, 
+    rgba(147, 51, 234, 0.1) 50%, 
+    rgba(59, 130, 246, 0.1) 100%);
+  backdrop-filter: blur(24px) saturate(1.8) brightness(1.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: var(--shadow-premium), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Premium Animation Classes */
 .animate-slide-up {
-  animation: slideUp 0.5s ease-out;
+  animation: slideUp 0.5s var(--ease-premium);
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn 0.3s var(--ease-premium);
 }
 
 .animate-scale-in {
-  animation: scaleIn 0.3s ease-out;
+  animation: scaleIn 0.3s var(--ease-bounce);
 }
 
+.animate-glow {
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-gradient {
+  animation: gradientShift 8s ease infinite;
+  background-size: 300% 300%;
+}
+
+.hover-lift {
+  transition: transform 0.3s var(--ease-premium), box-shadow 0.3s var(--ease-premium);
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: var(--shadow-premium);
+}
+
+.hover-glow {
+  transition: box-shadow 0.3s var(--ease-premium);
+}
+
+.hover-glow:hover {
+  box-shadow: var(--shadow-glow-blue);
+}
+
+/* Premium Keyframe Animations */
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -236,10 +389,82 @@ body {
   }
 }
 
-/* Responsive typography */
+@keyframes glow {
+  from {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+  }
+  to {
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.4), 0 0 40px rgba(59, 130, 246, 0.2);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+/* Premium Responsive Design */
+@media (max-width: 1200px) {
+  .premium-card {
+    backdrop-filter: blur(16px);
+  }
+}
+
 @media (max-width: 768px) {
   html {
     font-size: 14px;
+  }
+  
+  .premium-card {
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-card);
+  }
+  
+  .elite-card {
+    backdrop-filter: blur(16px);
+  }
+}
+
+@media (max-width: 640px) {
+  .glass-heavy,
+  .glass-premium {
+    backdrop-filter: blur(10px);
   }
 }
 
@@ -251,7 +476,7 @@ body {
   }
 }
 
-/* Reduced motion support */
+/* Enhanced Accessibility Support */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -260,4 +485,57 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+  
+  .animate-glow,
+  .animate-float,
+  .animate-gradient {
+    animation: none !important;
+  }
+}
+
+/* Premium Focus States */
+.premium-focus:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+  border-color: rgba(59, 130, 246, 0.8);
+}
+
+/* World-Class Loading States */
+.premium-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.premium-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent);
+  animation: shimmer 2s infinite;
+}
+
+/* Premium Scrollbar */
+.premium-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.premium-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.premium-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 3px;
+}
+
+.premium-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #5a67d8, #6b46c1);
 }
