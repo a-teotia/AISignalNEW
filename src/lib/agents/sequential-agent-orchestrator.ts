@@ -102,16 +102,39 @@ export class SequentialAgentOrchestrator {
       });
 
       const totalTime = Date.now() - startTime;
-      console.log(`✅ Sequential analysis completed in ${totalTime}ms`);
 
-      // Combine all citations
+      // Combine all citations including news collection citations
       const allCitations = [
-        ...quantAnalysis.citedSources,
-        ...marketAnalysis.citedSources,
-        ...technicalAnalysis.citedSources,
-        ...sentimentAnalysis.citedSources,
-        ...finalReport.citedSources
-      ].filter((source, index, self) => self.indexOf(source) === index); // Remove duplicates
+        ...(quantAnalysis.citedSources || []),
+        ...(marketAnalysis.citedSources || []),
+        ...(technicalAnalysis.citedSources || []),
+        ...(sentimentAnalysis.citedSources || []),
+        ...(finalReport.citedSources || [])
+      ].filter((source, index, self) => 
+        // Remove duplicates and filter out generic fallback sources
+        self.indexOf(source) === index && 
+        !source.includes('Yahoo Finance API') && 
+        !source.includes('Twelve Data Professional') &&
+        !source.includes('Barchart, TradingView') &&
+        !source.includes('AInvest')
+      );
+
+      console.log(`📚 Final Citations Collection for ${symbol}:`);
+      console.log(`   Total unique citations: ${allCitations.length}`);
+      console.log(`   First 3 citations:`, allCitations.slice(0, 3));
+      console.log(`   Citation types:`, allCitations.map(c => c.includes('http') ? 'URL' : 'Text').slice(0, 5));
+
+      // Comprehensive completion summary
+      console.log(`\n🎯 SEQUENTIAL ANALYSIS COMPLETED FOR ${symbol}:`);
+      console.log(`======================================================`);
+      console.log(`🕒 Total Processing Time: ${totalTime}ms`);
+      console.log(`📊 Agent Chain: ${['QuantitativeAnalysis', 'MarketAnalysis', 'TechnicalAnalysis', 'SentimentAnalysis', 'FinalSynthesis'].join(' → ')}`);
+      console.log(`🎯 Final Verdict: ${finalReport.data.finalVerdict?.direction || 'Unknown'} (${finalReport.data.finalVerdict?.confidence || 0}% confidence)`);
+      console.log(`💰 Price Target: $${finalReport.data.finalVerdict?.priceTarget || 'N/A'}`);
+      console.log(`⚡ Risk Level: ${finalReport.data.finalVerdict?.risk || 'Unknown'}`);
+      console.log(`📚 Total Citations: ${allCitations.length} sources`);
+      console.log(`📈 Key Risks: ${finalReport.data.keyRisks?.slice(0, 2).join(', ') || 'None identified'}`);
+      console.log(`======================================================\n`);
 
       return {
         symbol,
@@ -136,6 +159,161 @@ export class SequentialAgentOrchestrator {
   }
 
   /**
+   * NEWS COLLECTION AGENT: Dedicated news and social media analysis
+   * Uses Perplexity Sonar to collect comprehensive news from multiple sources
+   */
+  private async runNewsCollectionAgent(symbol: string): Promise<any> {
+    console.log(`📰 Collecting comprehensive news for ${symbol}...`);
+
+    const prompt = `You are a financial news analyst. Collect and analyze ALL relevant news and information for ${symbol} from multiple sources.
+
+COMPREHENSIVE NEWS COLLECTION TASKS:
+1. Search for the latest financial news about ${symbol} from major financial publications (Bloomberg, Reuters, CNBC, Financial Times)
+2. Find recent Reddit discussions and sentiment on r/investing, r/stocks, r/SecurityAnalysis, r/ValueInvesting
+3. Look for social media mentions and trends (Twitter/X financial community)
+4. Search for macroeconomic news that could impact ${symbol} (Fed policy, inflation, sector trends)
+5. Find analyst reports, upgrades/downgrades, and institutional moves
+6. Look for earnings updates, guidance changes, and corporate developments
+7. Check for regulatory news, SEC filings, and legal developments
+8. Search for competitor news that might affect ${symbol}
+
+CRITICAL: Use real-time internet search. Provide specific URLs and publication dates.
+
+Return ONLY valid JSON:
+{
+  "symbol": "${symbol}",
+  "newsAnalysis": {
+    "recentNews": [
+      {
+        "headline": "Specific headline",
+        "source": "Bloomberg",
+        "url": "https://bloomberg.com/...",
+        "publishedAt": "2024-01-15T10:30:00Z",
+        "sentiment": "POSITIVE|NEGATIVE|NEUTRAL",
+        "impact": "HIGH|MEDIUM|LOW",
+        "summary": "Brief summary of the news",
+        "relevanceScore": 8.5
+      }
+    ],
+    "socialMediaSentiment": {
+      "redditSentiment": {
+        "overallSentiment": "BULLISH|BEARISH|NEUTRAL",
+        "mentionCount": 145,
+        "topDiscussions": [
+          {
+            "subreddit": "r/investing",
+            "title": "Discussion title",
+            "sentiment": "POSITIVE",
+            "upvotes": 234,
+            "url": "https://reddit.com/..."
+          }
+        ],
+        "keyThemes": ["Growth prospects", "Valuation concerns"]
+      },
+      "twitterSentiment": {
+        "overallSentiment": "BULLISH|BEARISH|NEUTRAL",
+        "influencerMentions": [
+          {
+            "author": "Financial influencer name",
+            "content": "Tweet content",
+            "sentiment": "POSITIVE",
+            "followersCount": 50000
+          }
+        ]
+      }
+    },
+    "macroeconomicContext": {
+      "relevantMacroNews": [
+        {
+          "headline": "Fed policy update affecting sector",
+          "impact": "HIGH",
+          "relevanceToSymbol": "Direct correlation with sector performance"
+        }
+      ],
+      "sectorTrends": [
+        "Industry-wide growth trends",
+        "Regulatory changes affecting sector"
+      ]
+    },
+    "analystActivity": {
+      "recentRatingChanges": [
+        {
+          "firm": "Goldman Sachs",
+          "oldRating": "BUY",
+          "newRating": "BUY",
+          "priceTarget": 165,
+          "date": "2024-01-10",
+          "reasoning": "Strong fundamentals"
+        }
+      ],
+      "consensusRating": "BUY|HOLD|SELL",
+      "avgPriceTarget": 162.50
+    },
+    "corporateUpdates": [
+      {
+        "type": "EARNINGS|GUIDANCE|ACQUISITION|PRODUCT_LAUNCH",
+        "headline": "Company announces...",
+        "date": "2024-01-12",
+        "impact": "HIGH|MEDIUM|LOW"
+      }
+    ]
+  },
+  "sentimentSummary": {
+    "overallSentiment": "BULLISH|BEARISH|NEUTRAL",
+    "sentimentScore": 7.5,
+    "confidenceLevel": 85,
+    "keyRisks": ["Market volatility", "Regulatory uncertainty"],
+    "keyOpportunities": ["Strong earnings growth", "Market expansion"]
+  },
+  "citedSources": [
+    "https://bloomberg.com/specific-article",
+    "https://reddit.com/r/investing/comments/...",
+    "https://twitter.com/username/status/..."
+  ],
+  "dataFreshness": "2024-01-15T14:30:00Z",
+  "confidence": 88
+}`;
+
+    try {
+      const result = await this.callPerplexitySOnar(prompt);
+      const data = this.safeParseJson(result.content, symbol, 'NewsCollectionAgent');
+      
+      console.log(`✅ News Collection completed for ${symbol}:`);
+      console.log(`   News Articles: ${data.newsAnalysis?.recentNews?.length || 0}`);
+      console.log(`   Reddit Mentions: ${data.newsAnalysis?.socialMediaSentiment?.redditSentiment?.mentionCount || 0}`);
+      console.log(`   Overall Sentiment: ${data.sentimentSummary?.overallSentiment || 'Unknown'} (${data.sentimentSummary?.sentimentScore || 0}/10)`);
+      console.log(`   Sources: ${data.citedSources?.length || 0} citations`);
+      console.log(`   Actual Citations:`, data.citedSources?.slice(0, 3) || 'None');
+      console.log(`   Processing Time: ${result.processingTime}ms`);
+      
+      return data;
+    } catch (error) {
+      console.error(`❌ News collection failed for ${symbol}:`, error);
+      
+      // Return fallback structure
+      return {
+        symbol,
+        newsAnalysis: {
+          recentNews: [],
+          socialMediaSentiment: { redditSentiment: { overallSentiment: 'NEUTRAL', mentionCount: 0 } },
+          macroeconomicContext: { relevantMacroNews: [] },
+          analystActivity: { recentRatingChanges: [] },
+          corporateUpdates: []
+        },
+        sentimentSummary: {
+          overallSentiment: 'NEUTRAL',
+          sentimentScore: 5.0,
+          confidenceLevel: 30,
+          keyRisks: ['News data unavailable'],
+          keyOpportunities: []
+        },
+        citedSources: ['Fallback - News collection failed'],
+        confidence: 30
+      };
+    }
+  }
+
+  /**
    * AGENT 1: Quantitative Data Analysis Agent
    * Pulls comprehensive market data, technical indicators, volume analysis
    */
@@ -147,8 +325,12 @@ export class SequentialAgentOrchestrator {
       const { createDataProviderOrchestrator } = await import('../services');
       const dataOrchestrator = await createDataProviderOrchestrator();
       
-      // Get comprehensive market data
+      // Get comprehensive market data (but skip unreliable news from Yahoo)
       const comprehensiveData = await dataOrchestrator.getComprehensiveData(input.symbol);
+      
+      // Use Perplexity Sonar for comprehensive news collection instead
+      const newsData = await this.runNewsCollectionAgent(input.symbol);
+      console.log(`📰 News Agent returned ${newsData.citedSources?.length || 0} citations for ${input.symbol}`);
       
       console.log(`📊 Retrieved comprehensive data for ${input.symbol}:`, {
         hasMarketData: !!comprehensiveData.marketData,
@@ -164,6 +346,9 @@ export class SequentialAgentOrchestrator {
 
 COMPREHENSIVE MARKET DATA:
 ${JSON.stringify(comprehensiveData, null, 2)}
+
+COMPREHENSIVE NEWS & SENTIMENT DATA:
+${JSON.stringify(newsData, null, 2)}
 
 QUANTITATIVE ANALYSIS TASKS:
 1. Price Action Analysis: Current price, volume, volatility patterns
@@ -278,6 +463,19 @@ Return ONLY valid JSON:
 
       const result = await this.callPerplexitySOnar(prompt);
       const data = this.safeParseJson(result.content, input.symbol, 'QuantitativeAnalysisAgent');
+      
+      const combinedCitations = [...(data.citedSources || []), ...(newsData.citedSources || []), ...(comprehensiveData.sources || [])];
+      
+      console.log(`✅ Agent 1 (Quantitative) completed for ${input.symbol}:`);
+      console.log(`   Confidence: ${data.confidence}%`);
+      console.log(`   Key Findings: ${data.keyFindings?.slice(0, 2).join(', ') || 'None'}`);
+      console.log(`   Data Quality: ${data.dataQuality?.completeness || 'Unknown'}%`);
+      console.log(`   🔗 Citations Breakdown:`);
+      console.log(`      - Quantitative Agent: ${data.citedSources?.length || 0}`);
+      console.log(`      - News Collection Agent: ${newsData.citedSources?.length || 0}`);
+      console.log(`      - Comprehensive Data: ${comprehensiveData.sources?.length || 0}`);
+      console.log(`      - Total Combined: ${combinedCitations.length}`);
+      console.log(`   Processing Time: ${result.processingTime}ms`);
 
       return {
         agent: 'QuantitativeAnalysisAgent',
@@ -285,8 +483,8 @@ Return ONLY valid JSON:
         timestamp: new Date().toISOString(),
         data,
         confidence: data.confidence,
-        sources: data.citedSources || comprehensiveData.sources || [],
-        citedSources: data.citedSources || comprehensiveData.sources || [],
+        sources: combinedCitations,
+        citedSources: combinedCitations,
         processingTime: result.processingTime,
         nextAgentInput: {
           quantMetrics: {
@@ -298,6 +496,7 @@ Return ONLY valid JSON:
             marketMicrostructure: data.marketMicrostructure
           },
           comprehensiveData: comprehensiveData, // Pass raw data to next agents
+          comprehensiveNewsData: newsData, // Pass comprehensive news data to all subsequent agents
           dataQuality: comprehensiveData.overallQuality,
           keyInsights: data.keyFindings
         },
@@ -351,15 +550,19 @@ Return ONLY valid JSON:
 QUANTITATIVE DATA FROM AGENT 1:
 ${JSON.stringify(quantData, null, 2)}
 
-RESEARCH TASKS:
-1. Search the internet for latest company information, financial reports, and market position
-2. Integrate the quantitative analysis from Agent 1 with fundamental research
-2. Analyze current business model, revenue streams, and competitive advantages
-3. Review latest earnings results, guidance, and analyst consensus
-4. Assess sector trends and macroeconomic factors affecting the company
-5. Identify upcoming catalysts (earnings, product launches, regulatory decisions)
+COMPREHENSIVE NEWS & SENTIMENT DATA FROM AGENT 1:
+${JSON.stringify(quantData?.comprehensiveNewsData, null, 2)}
 
-CRITICAL: Use real, current information from the internet. Provide specific citations for all facts.
+RESEARCH TASKS:
+1. Integrate the comprehensive news and sentiment data already collected from multiple sources
+2. Analyze the quantitative metrics alongside the news analysis, social media sentiment, and analyst activity
+3. Cross-reference the fundamental analysis with recent news developments and market sentiment
+4. Assess how recent news developments (earnings, guidance, corporate updates) impact fundamental valuation
+5. Evaluate analyst consensus changes and institutional sentiment shifts
+6. Identify fundamental catalysts that align with or contradict current news sentiment
+7. Use internet research to supplement and validate the existing comprehensive news data
+
+CRITICAL: Leverage both the existing comprehensive news analysis AND conduct additional internet research. Cross-validate all findings.
 
 Return ONLY valid JSON with this structure:
 {
@@ -407,6 +610,12 @@ Return ONLY valid JSON with this structure:
 
     const result = await this.callPerplexitySOnar(prompt);
     const data = this.safeParseJson(result.content, input.symbol, 'MarketAnalysisAgent');
+    
+    console.log(`✅ Agent 2 (Market Analysis) completed for ${input.symbol}:`);
+    console.log(`   Confidence: ${data.confidence}%`);
+    console.log(`   Company: ${data.companyOverview?.businessModel?.slice(0, 50) || 'Unknown'}...`);
+    console.log(`   Sources: ${data.citedSources?.length || 0} citations`);
+    console.log(`   Processing Time: ${result.processingTime}ms`);
 
     return {
       agent: 'MarketAnalysisAgent',
@@ -421,7 +630,8 @@ Return ONLY valid JSON with this structure:
         fundamentalScore: this.calculateFundamentalScore(data),
         keyMetrics: data.financialHealth,
         catalysts: data.upcomingCatalysts,
-        macroContext: data.macroFactors
+        macroContext: data.macroFactors,
+        comprehensiveNewsData: quantData?.comprehensiveNewsData // Pass news data forward
       },
       metadata: { agentType: 'market_analysis' },
       quality: this.createQualityMetrics(data.citedSources?.length || 0),
@@ -441,14 +651,16 @@ Return ONLY valid JSON with this structure:
 
 QUANTITATIVE DATA FROM AGENT 1: ${JSON.stringify(quantData)}
 FUNDAMENTAL ANALYSIS FROM AGENT 2: ${JSON.stringify(marketData)}
+COMPREHENSIVE NEWS & SENTIMENT DATA: ${JSON.stringify(marketData?.comprehensiveNewsData)}
 
 RESEARCH TASKS:
-1. Search for current price, volume, and technical indicators  
-2. Analyze chart patterns, support/resistance levels
-3. Review institutional flow and options activity
-4. Assess momentum indicators and trend strength
-5. Integrate quantitative metrics from Agent 1 with fundamental insights from Agent 2
-6. Cross-validate technical signals with quantitative data already available
+1. Analyze technical patterns while considering news sentiment and market psychology  
+2. Evaluate how recent news developments and social media sentiment might impact technical levels
+3. Cross-reference institutional flow analysis with comprehensive news data on analyst activity
+4. Assess whether technical momentum aligns with or diverges from fundamental news sentiment
+5. Identify technical breakout/breakdown levels that could be triggered by news catalysts
+6. Integrate quantitative metrics, fundamental insights, and comprehensive news analysis
+7. Use options flow and institutional activity data to validate news-driven market sentiment
 
 Use internet sources for real-time data and technical analysis.
 
@@ -513,6 +725,12 @@ Return ONLY valid JSON:
 
     const result = await this.callPerplexitySOnar(prompt);
     const data = this.safeParseJson(result.content, input.symbol, 'TechnicalAnalysisAgent');
+    
+    console.log(`✅ Agent 3 (Technical Analysis) completed for ${input.symbol}:`);
+    console.log(`   Confidence: ${data.confidence}%`);
+    console.log(`   Trend: ${data.trendAnalysis?.shortTerm || 'Unknown'} (${data.trendAnalysis?.trendStrength || 0}/10)`);
+    console.log(`   Price Targets: Bull ${data.priceTargets?.bullish || 'N/A'} | Bear ${data.priceTargets?.bearish || 'N/A'}`);
+    console.log(`   Processing Time: ${result.processingTime}ms`);
 
     return {
       agent: 'TechnicalAnalysisAgent',
@@ -527,7 +745,8 @@ Return ONLY valid JSON:
         technicalScore: data.fundamentalIntegration?.combinedScore || 7,
         trend: data.trendAnalysis,
         priceTargets: data.priceTargets,
-        currentPrice: data.priceAction?.currentPrice
+        currentPrice: data.priceAction?.currentPrice,
+        comprehensiveNewsData: marketData?.comprehensiveNewsData // Pass news data forward
       },
       metadata: { agentType: 'technical_analysis' },
       quality: this.createQualityMetrics(data.citedSources?.length || 0),
@@ -543,20 +762,26 @@ Return ONLY valid JSON:
   private async runSentimentAnalysisAgent(input: SequentialAgentInput): Promise<SequentialAgentOutput> {
     const { quantData, marketData, technicalData } = input.previousAnalysis;
     
-    const prompt = `You are a market sentiment analyst. Analyze news sentiment and market psychology for ${input.symbol}.
+    const prompt = `You are a market sentiment analyst. Synthesize and expand upon the comprehensive news and sentiment analysis for ${input.symbol}.
 
 PREVIOUS ANALYSIS FROM AGENT CHAIN:
 QUANTITATIVE DATA (Agent 1): ${JSON.stringify(quantData)}
 FUNDAMENTAL ANALYSIS (Agent 2): ${JSON.stringify(marketData)}  
 TECHNICAL ANALYSIS (Agent 3): ${JSON.stringify(technicalData)}
 
-RESEARCH TASKS:
-1. Search latest news, analyst upgrades/downgrades, earnings calls
-2. Analyze social media sentiment and retail investor behavior
-3. Review institutional positioning and smart money moves
-4. Assess market sentiment indicators and fear/greed levels
-5. Integrate with quantitative, fundamental, and technical analysis from all previous agents
-6. Identify sentiment-driven factors that could override or confirm technical/fundamental signals
+COMPREHENSIVE NEWS & SENTIMENT DATA ALREADY COLLECTED:
+${JSON.stringify(technicalData?.comprehensiveNewsData, null, 2)}
+
+ANALYSIS TASKS:
+1. Leverage the existing comprehensive news analysis (financial news, Reddit, social media, analyst activity)
+2. Cross-validate the existing sentiment data with the quantitative, fundamental, and technical analysis
+3. Identify gaps in the sentiment analysis and fill them with additional internet research
+4. Analyze sentiment conflicts and convergences across all data sources
+5. Assess how sentiment trends might evolve based on technical and fundamental factors
+6. Evaluate the reliability and freshness of the comprehensive sentiment data
+7. Provide refined sentiment scoring that integrates all previous agent findings
+
+CRITICAL: You already have comprehensive news and sentiment data. Focus on ANALYSIS and INTEGRATION rather than re-collecting the same data.
 
 Return ONLY valid JSON:
 {
@@ -618,6 +843,12 @@ Return ONLY valid JSON:
 
     const result = await this.callPerplexitySOnar(prompt);
     const data = this.safeParseJson(result.content, input.symbol, 'SentimentAnalysisAgent');
+    
+    console.log(`✅ Agent 4 (Sentiment Analysis) completed for ${input.symbol}:`);
+    console.log(`   Confidence: ${data.confidence}%`);
+    console.log(`   Overall Sentiment: ${data.sentimentIntegration?.overallSentimentScore || 'Unknown'}/10`);
+    console.log(`   News Sentiment: ${data.newsAnalysis?.overallNewsSentiment || 'Unknown'}`);
+    console.log(`   Processing Time: ${result.processingTime}ms`);
 
     return {
       agent: 'SentimentAnalysisAgent',
@@ -655,14 +886,19 @@ MARKET FUNDAMENTALS (Agent 2): ${JSON.stringify(marketAnalysis, null, 2)}
 TECHNICAL ANALYSIS (Agent 3): ${JSON.stringify(technicalAnalysis, null, 2)}
 SENTIMENT ANALYSIS (Agent 4): ${JSON.stringify(sentimentAnalysis, null, 2)}
 
+COMPREHENSIVE NEWS & SENTIMENT DATA (Integrated Across All Agents):
+${JSON.stringify(sentimentAnalysis?.nextAgentInput?.comprehensiveNewsData || technicalAnalysis?.nextAgentInput?.comprehensiveNewsData, null, 2)}
+
 SYNTHESIS TASKS:
 1. Integrate quantitative, fundamental, technical, and sentiment analysis from all 4 agents
-2. Identify conflicts and convergences between different analysis approaches
-3. Weight each analysis type based on reliability and current market conditions
-4. Cross-validate findings across all analysis types (quant data vs sentiment, technicals vs fundamentals)
-5. Generate specific price targets with time horizons based on comprehensive analysis
-6. Assess key risks and potential catalysts from all perspectives
-7. Provide final BUY/SELL/HOLD recommendation with confidence level and detailed reasoning
+2. Leverage the comprehensive news analysis (Bloomberg, Reddit, Twitter, analyst reports) throughout the synthesis
+3. Cross-validate all findings with the real-time news sentiment and social media analysis
+4. Weight each analysis type based on current market conditions and news-driven factors
+5. Assess how news catalysts and sentiment shifts may impact technical and fundamental projections
+6. Generate specific price targets considering news-driven volatility and sentiment momentum
+7. Provide final BUY/SELL/HOLD recommendation integrating all quantitative, fundamental, technical, and comprehensive news analysis
+
+CRITICAL: Your recommendation must integrate ALL aspects including the comprehensive news and social media sentiment data collected from multiple sources.
 
 CRITICAL: Provide detailed reasoning and cite specific sources from all previous agents.
 
@@ -721,6 +957,13 @@ Return ONLY valid JSON:
 
     const result = await this.callPerplexitySOnar(prompt);
     const data = this.safeParseJson(result.content, input.symbol, 'FinalSynthesisAgent');
+    
+    console.log(`✅ Agent 5 (Final Synthesis) completed for ${input.symbol}:`);
+    console.log(`   Final Verdict: ${data.finalVerdict?.direction || 'Unknown'} (${data.finalVerdict?.confidence || 0}%)`);
+    console.log(`   Price Target: $${data.finalVerdict?.priceTarget || 'N/A'}`);
+    console.log(`   Risk Level: ${data.finalVerdict?.risk || 'Unknown'}`);
+    console.log(`   Total Sources: ${data.citedSources?.length || 0} citations`);
+    console.log(`   Processing Time: ${result.processingTime}ms`);
 
     return {
       agent: 'FinalSynthesisAgent',
@@ -770,7 +1013,17 @@ Return ONLY valid JSON:
     const cleanedContent = this.cleanJsonResponse(content);
     
     try {
-      return JSON.parse(cleanedContent);
+      const parsed = JSON.parse(cleanedContent);
+      
+      // Debug: Check if citations exist in parsed data
+      if (parsed.citedSources) {
+        console.log(`📝 ${agentName} - Found ${parsed.citedSources.length} citations:`, parsed.citedSources.slice(0, 2));
+      } else {
+        console.log(`⚠️ ${agentName} - No citedSources field found in parsed JSON`);
+        console.log(`🔍 ${agentName} - Available fields:`, Object.keys(parsed));
+      }
+      
+      return parsed;
     } catch (parseError) {
       console.error(`❌ JSON parsing failed for ${symbol} in ${agentName}:`, parseError);
       console.error('Raw content:', content);
@@ -821,6 +1074,8 @@ Return ONLY valid JSON:
       const data = await response.json();
       const content = data.choices[0].message.content;
       const processingTime = Date.now() - startTime;
+
+      console.log(`🔍 Perplexity Raw Response Preview:`, content.substring(0, 500) + '...');
 
       return { content, processingTime };
 

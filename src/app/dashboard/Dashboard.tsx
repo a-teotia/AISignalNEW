@@ -120,6 +120,9 @@ export default function Dashboard() {
   // Pagination state for recent analyses
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(3); // Show 3 analyses per page
+  
+  // State for viewing full analysis reports
+  const [viewingFullReport, setViewingFullReport] = useState<any>(null);
 
   // Load performance metrics on symbol change
   useEffect(() => {
@@ -151,7 +154,34 @@ export default function Dashboard() {
       const res = await fetch('/api/sequential-analysis');
       const data = await res.json();
       if (data.success && data.analysisHistory) {
-        setRecentAnalyses(data.analysisHistory);
+        // Transform the data to match our expected format with full analysis details
+        const transformedAnalyses = data.analysisHistory.map((analysis: any) => ({
+          id: analysis.id,
+          symbol: analysis.symbol,
+          timestamp: analysis.timestamp,
+          verdict: analysis.verdict,
+          confidence: analysis.confidence,
+          reasoning: analysis.reasoning,
+          priceTarget: analysis.analysisDetails?.priceTarget,
+          agentChain: analysis.analysisDetails?.agentChain || ['QuantitativeAnalysis', 'MarketAnalysis', 'TechnicalAnalysis', 'SentimentAnalysis', 'FinalSynthesis'],
+          // Include full analysis details if available
+          fullAnalysis: {
+            executiveSummary: analysis.analysisDetails?.executiveSummary || analysis.reasoning,
+            finalVerdict: {
+              direction: analysis.verdict,
+              confidence: analysis.confidence,
+              priceTarget: analysis.analysisDetails?.priceTarget,
+              reasoning: analysis.reasoning,
+              risk: analysis.analysisDetails?.risk || 'UNKNOWN',
+              timeHorizon: analysis.analysisDetails?.timeHorizon || 'Unknown'
+            },
+            keyRisks: analysis.analysisDetails?.keyRisks || [],
+            catalysts: analysis.analysisDetails?.catalysts || [],
+            citedSources: analysis.analysisDetails?.citedSources || [],
+            totalProcessingTime: analysis.analysisDetails?.totalProcessingTime || 0
+          }
+        }));
+        setRecentAnalyses(transformedAnalyses);
       }
     } catch (err) {
       console.error('Failed to fetch recent analyses:', err);
@@ -161,18 +191,34 @@ export default function Dashboard() {
   // Handle sequential analysis completion
   const handleSequentialAnalysisComplete = (result: any) => {
     console.log('Sequential analysis completed:', result);
+    console.log('Citations in result:', result.allCitations);
+    console.log('Citations length:', result.allCitations?.length || 0);
+    console.log('First 3 citations:', result.allCitations?.slice(0, 3));
     setSequentialAnalysisResult(result);
     
-    // Update the recent analyses list
+    // Update the recent analyses list with FULL analysis data preserved
     const newAnalysis = {
       id: Date.now(),
       symbol: result.symbol,
       timestamp: result.timestamp,
-      verdict: result.finalVerdict.direction,
-      confidence: result.finalVerdict.confidence,
-      priceTarget: result.finalVerdict.priceTarget,
-      reasoning: result.finalVerdict.reasoning,
-      agentChain: result.agentChain
+      verdict: result.finalVerdict?.direction || 'HOLD',
+      confidence: result.finalVerdict?.confidence || 50,
+      priceTarget: result.finalVerdict?.priceTarget,
+      reasoning: result.finalVerdict?.reasoning,
+      agentChain: result.agentChain,
+      // Preserve ALL analysis details for full report display
+      fullAnalysis: {
+        executiveSummary: result.executiveSummary,
+        finalVerdict: result.finalVerdict,
+        quantAnalysis: result.quantAnalysis,
+        marketAnalysis: result.marketAnalysis,
+        technicalAnalysis: result.technicalAnalysis,
+        sentimentAnalysis: result.sentimentAnalysis,
+        keyRisks: result.keyRisks,
+        catalysts: result.catalysts,
+        citedSources: result.allCitations || result.citedSources || [],
+        totalProcessingTime: result.totalProcessingTime
+      }
     };
     
     setRecentAnalyses(prev => [newAnalysis, ...prev.slice(0, 9)]); // Keep last 10
@@ -593,7 +639,16 @@ export default function Dashboard() {
                               {new Date(analysis.timestamp).toLocaleString()}
                             </span>
                           </div>
-                          <Button size="sm" variant="outline" className="border-primary/30 text-primary hover:bg-primary/10 rounded-xl">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="border-primary/30 text-primary hover:bg-primary/10 rounded-xl"
+                            onClick={() => {
+                              console.log('Full analysis data:', analysis);
+                              console.log('Full analysis object:', analysis.fullAnalysis);
+                              setViewingFullReport(analysis);
+                            }}
+                          >
                             View Full Report
                           </Button>
                         </div>
@@ -780,6 +835,155 @@ export default function Dashboard() {
           {/* Sequential Analysis is now handled above in the SequentialAnalysisCard */}
         </div>
       </div>
+
+      {/* Full Report Modal */}
+      {viewingFullReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="bg-gradient-to-br from-black via-gray-900 to-black border border-primary/30 rounded-2xl shadow-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto m-4">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-primary">
+                Full Analysis Report - {viewingFullReport.symbol}
+              </h2>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setViewingFullReport(null)}
+                className="border-primary/30 text-primary hover:bg-primary/10"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* Debug Info */}
+            <div className="bg-red-900/50 p-4 rounded-lg border border-red-500/20 mb-4">
+              <h3 className="text-lg font-semibold text-red-400 mb-2">Debug Info</h3>
+              <p className="text-gray-300 text-xs">Has fullAnalysis: {viewingFullReport.fullAnalysis ? 'YES' : 'NO'}</p>
+              <p className="text-gray-300 text-xs">Citations: {viewingFullReport.fullAnalysis?.citedSources?.length || 0}</p>
+              <p className="text-gray-300 text-xs">Raw analysis keys: {Object.keys(viewingFullReport).join(', ')}</p>
+              {viewingFullReport.fullAnalysis && (
+                <p className="text-gray-300 text-xs">Full analysis keys: {Object.keys(viewingFullReport.fullAnalysis).join(', ')}</p>
+              )}
+            </div>
+
+            {viewingFullReport.fullAnalysis ? (
+              <div className="space-y-6">
+                {/* Executive Summary */}
+                {viewingFullReport.fullAnalysis.executiveSummary && (
+                  <div className="bg-gray-900/50 p-4 rounded-lg border border-primary/20">
+                    <h3 className="text-lg font-semibold text-primary mb-2">Executive Summary</h3>
+                    <p className="text-gray-300 text-sm">{viewingFullReport.fullAnalysis.executiveSummary}</p>
+                  </div>
+                )}
+
+                {/* Final Verdict */}
+                <div className="bg-gray-900/50 p-4 rounded-lg border border-primary/20">
+                  <h3 className="text-lg font-semibold text-primary mb-3">Final Verdict</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-400">Direction</p>
+                      <p className={`text-xl font-bold ${getDirectionColor(viewingFullReport.verdict)}`}>
+                        {viewingFullReport.verdict}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Confidence</p>
+                      <p className="text-xl font-bold text-white">{viewingFullReport.confidence}%</p>
+                    </div>
+                    {viewingFullReport.priceTarget && (
+                      <div>
+                        <p className="text-sm text-gray-400">Price Target</p>
+                        <p className="text-xl font-bold text-primary">${viewingFullReport.priceTarget}</p>
+                      </div>
+                    )}
+                    {viewingFullReport.fullAnalysis.finalVerdict?.risk && (
+                      <div>
+                        <p className="text-sm text-gray-400">Risk Level</p>
+                        <p className="text-xl font-bold text-white">{viewingFullReport.fullAnalysis.finalVerdict.risk}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Citations */}
+                {viewingFullReport.fullAnalysis.citedSources?.length > 0 && (
+                  <div className="bg-gray-900/50 p-4 rounded-lg border border-primary/20">
+                    <h3 className="text-lg font-semibold text-primary mb-2">
+                      Citations ({viewingFullReport.fullAnalysis.citedSources.length})
+                    </h3>
+                    <div className="space-y-1 max-h-40 overflow-y-auto">
+                      {viewingFullReport.fullAnalysis.citedSources.map((source: string, index: number) => (
+                        <p key={index} className="text-gray-300 text-sm">
+                          {index + 1}. {source.startsWith('http') ? (
+                            <a href={source} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                              {source}
+                            </a>
+                          ) : source}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Key Risks & Catalysts */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  {viewingFullReport.fullAnalysis.keyRisks?.length > 0 && (
+                    <div className="bg-gray-900/50 p-4 rounded-lg border border-red-500/20">
+                      <h3 className="text-lg font-semibold text-red-400 mb-2">Key Risks</h3>
+                      <div className="space-y-1">
+                        {viewingFullReport.fullAnalysis.keyRisks.map((risk: string, index: number) => (
+                          <p key={index} className="text-gray-300 text-sm">• {risk}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {viewingFullReport.fullAnalysis.catalysts?.length > 0 && (
+                    <div className="bg-gray-900/50 p-4 rounded-lg border border-green-500/20">
+                      <h3 className="text-lg font-semibold text-green-400 mb-2">Catalysts</h3>
+                      <div className="space-y-2">
+                        {viewingFullReport.fullAnalysis.catalysts.map((catalyst: any, index: number) => (
+                          <div key={index} className="text-sm">
+                            <p className="text-gray-300">{catalyst.event || catalyst}</p>
+                            {catalyst.date && (
+                              <p className="text-gray-400 text-xs">
+                                {catalyst.date} - {catalyst.impact} impact
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Agent Chain */}
+                <div className="bg-gray-900/50 p-4 rounded-lg border border-primary/20">
+                  <h3 className="text-lg font-semibold text-primary mb-2">Analysis Chain</h3>
+                  <p className="text-gray-300 text-sm">
+                    {viewingFullReport.agentChain?.join(' → ') || '5-Agent Sequential Analysis'}
+                  </p>
+                  {viewingFullReport.fullAnalysis.totalProcessingTime && (
+                    <p className="text-gray-400 text-xs mt-2">
+                      Total Processing Time: {viewingFullReport.fullAnalysis.totalProcessingTime}ms
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-yellow-900/50 p-4 rounded-lg border border-yellow-500/20">
+                <h3 className="text-lg font-semibold text-yellow-400 mb-2">Limited Data Available</h3>
+                <p className="text-gray-300 text-sm">This analysis only has basic summary data. Full analysis details may not have been preserved.</p>
+                <div className="mt-4 space-y-2">
+                  <p className="text-gray-300 text-sm"><strong>Reasoning:</strong> {viewingFullReport.reasoning}</p>
+                  {viewingFullReport.priceTarget && (
+                    <p className="text-gray-300 text-sm"><strong>Price Target:</strong> ${viewingFullReport.priceTarget}</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

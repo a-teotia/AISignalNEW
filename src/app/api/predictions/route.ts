@@ -63,12 +63,24 @@ export async function POST(req: Request) {
 
     // Calculate accuracy and profit/loss
     const predictedUp = prediction.verdict === 'UP';
-    const actualUp = actualPrice > parseFloat(prediction.prediction_date); // Simplified logic
+    const entryPrice = prediction.entry || 0; // Use entry price from prediction
+    
+    // Calculate if price actually moved in predicted direction
+    const actualUp = actualPrice > entryPrice;
     const accuracy = predictedUp === actualUp;
     
-    // Calculate profit/loss (simplified - you might want to add more sophisticated logic)
-    const profitLoss = accuracy ? Math.abs(actualPrice - parseFloat(prediction.prediction_date)) : 
-                       -Math.abs(actualPrice - parseFloat(prediction.prediction_date));
+    // Calculate profit/loss based on entry vs actual price
+    // For UP predictions: profit = (actual - entry), loss = -(actual - entry)  
+    // For DOWN predictions: profit = (entry - actual), loss = -(entry - actual)
+    let profitLoss = 0;
+    if (prediction.verdict === 'UP') {
+      profitLoss = actualPrice - entryPrice; // Positive if price went up, negative if down
+    } else if (prediction.verdict === 'DOWN') {
+      profitLoss = entryPrice - actualPrice; // Positive if price went down, negative if up
+    } else {
+      // NEUTRAL predictions - minimal profit/loss calculation
+      profitLoss = Math.abs(actualPrice - entryPrice) * -0.1; // Small loss for neutral incorrect predictions
+    }
 
     // Update prediction with results
     const success = db.updatePredictionResults(
@@ -79,7 +91,7 @@ export async function POST(req: Request) {
       actualDate,
       accuracy,
       profitLoss,
-      `Actual price: ${actualPrice}, Prediction was ${accuracy ? 'correct' : 'incorrect'}`
+      `Entry: $${entryPrice}, Actual: $${actualPrice}, P&L: $${profitLoss.toFixed(2)}, Prediction was ${accuracy ? 'correct' : 'incorrect'}`
     );
 
     if (!success) {

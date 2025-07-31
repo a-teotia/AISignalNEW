@@ -46,6 +46,10 @@ export async function POST(req: Request) {
     const dbVerdict = mapVerdictToDb(analysisResult.finalVerdict?.direction || 'HOLD');
     
     // Save comprehensive prediction to database
+    console.log(`💾 Saving analysis to database for ${symbol}:`);
+    console.log(`   Citations to save: ${analysisResult.allCitations?.length || 0}`);
+    console.log(`   First 2 citations:`, analysisResult.allCitations?.slice(0, 2) || 'None');
+    
     let predictionId: number;
     try {
       predictionId = db.savePredictionVerdict({
@@ -64,7 +68,8 @@ export async function POST(req: Request) {
           keyRisks: analysisResult.keyRisks || [],
           catalysts: analysisResult.catalysts || [],
           agentChain: analysisResult.agentChain || [],
-          totalProcessingTime: analysisResult.totalProcessingTime || 0
+          totalProcessingTime: analysisResult.totalProcessingTime || 0,
+          citedSources: analysisResult.allCitations || [] // ✅ ADD MISSING CITATIONS!
         })
       });
     } catch (dbError) {
