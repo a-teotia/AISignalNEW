@@ -81,37 +81,6 @@ export async function POST(request: NextRequest) {
           strategyMetrics: result.strategyMetrics
         },
 
-        // Agent results (transformed for compatibility)
-        quantAnalysis: {
-          signal: result.agentContributions.technical.signal,
-          confidence: result.agentContributions.technical.confidence,
-          reasoning: 'Technical analysis adapted for ' + result.strategy + ' trading'
-        },
-        
-        marketAnalysis: {
-          signal: result.agentContributions.marketStructure.signal,
-          confidence: result.agentContributions.marketStructure.confidence,
-          reasoning: 'Market structure analysis for ' + result.strategy + ' timeframe'
-        },
-        
-        technicalAnalysis: {
-          signal: result.agentContributions.technical.signal,
-          confidence: result.agentContributions.technical.confidence,
-          reasoning: 'Strategy-aware technical analysis'
-        },
-        
-        sentimentAnalysis: {
-          signal: result.agentContributions.newsSentiment.signal,
-          confidence: result.agentContributions.newsSentiment.confidence,
-          reasoning: 'News sentiment analysis tailored for ' + result.strategy
-        },
-        
-        fundamentalAnalysis: {
-          signal: result.agentContributions.fundamental.signal,
-          confidence: result.agentContributions.fundamental.confidence,
-          reasoning: 'Fundamental analysis weighted for ' + result.strategy + ' strategy'
-        },
-
         // 🎯 TPSL (Take Profit, Stop Loss) Data - Critical for UI display
         tpslRecommendations: result.tpslRecommendations,
 
@@ -133,12 +102,31 @@ export async function POST(request: NextRequest) {
         totalProcessingTime: result.totalProcessingTime || processingTime,
 
         // Pass through all sequential analysis data for complete UI display
-        quantAnalysis: result.quantAnalysis,
-        marketAnalysis: result.marketAnalysis,
-        technicalAnalysis: result.technicalAnalysis,
-        sentimentAnalysis: result.sentimentAnalysis,
-        fundamentalAnalysis: result.fundamentalAnalysis,
-        executiveSummary: result.executiveSummary,
+        quantAnalysis: result.quantAnalysis || {
+          signal: result.agentContributions.technical.signal,
+          confidence: result.agentContributions.technical.confidence,
+          reasoning: 'Technical analysis adapted for ' + result.strategy + ' trading'
+        },
+        marketAnalysis: result.marketAnalysis || {
+          signal: result.agentContributions.marketStructure.signal,
+          confidence: result.agentContributions.marketStructure.confidence,
+          reasoning: 'Market structure analysis for ' + result.strategy + ' timeframe'
+        },
+        technicalAnalysis: result.technicalAnalysis || {
+          signal: result.agentContributions.technical.signal,
+          confidence: result.agentContributions.technical.confidence,
+          reasoning: 'Strategy-aware technical analysis'
+        },
+        sentimentAnalysis: result.sentimentAnalysis || {
+          signal: result.agentContributions.newsSentiment.signal,
+          confidence: result.agentContributions.newsSentiment.confidence,
+          reasoning: 'News sentiment analysis tailored for ' + result.strategy
+        },
+        fundamentalAnalysis: result.fundamentalAnalysis || {
+          signal: result.agentContributions.fundamental.signal,
+          confidence: result.agentContributions.fundamental.confidence,
+          reasoning: 'Fundamental analysis weighted for ' + result.strategy + ' strategy'
+        },
 
         // Enhanced strategy-specific data
         strategyOutput: result // Include full strategy output for enhanced UI

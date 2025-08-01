@@ -32,6 +32,17 @@ interface AnalysisResult {
   citedSources: string[];
   agentChain: string[];
   totalProcessingTime: number;
+  
+  // 🎯 TPSL (Take Profit, Stop Loss) Recommendations - Key user requirement
+  tpslRecommendations?: {
+    takeProfit1: number;
+    takeProfit2?: number;
+    stopLoss: number;
+    entryPrice: number;
+    riskRewardRatio: string;
+    positionSize?: string;
+    reasoning: string;
+  };
 }
 
 const SequentialAnalysisCard: React.FC<SequentialAnalysisCardProps> = ({

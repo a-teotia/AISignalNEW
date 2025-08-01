@@ -75,6 +75,28 @@ export interface StrategyOutput {
     risks: string[];        // Key risks to watch
     catalysts: string[];    // Potential triggers
   };
+
+  // 🎯 TPSL (Take Profit, Stop Loss) Recommendations - Key user requirement
+  tpslRecommendations?: {
+    takeProfit1: number;
+    takeProfit2?: number;
+    stopLoss: number;
+    entryPrice: number;
+    riskRewardRatio: string;
+    positionSize?: string;
+    reasoning: string;
+  };
+
+  // Sequential analysis pass-through data for complete UI display
+  executiveSummary?: string;
+  quantAnalysis?: any;
+  marketAnalysis?: any;
+  technicalAnalysis?: any;
+  sentimentAnalysis?: any;
+  fundamentalAnalysis?: any;
+  citedSources?: string[];
+  agentChain?: string[];
+  totalProcessingTime?: number;
   
   // Agent contributions with strategy context
   agentContributions: {
