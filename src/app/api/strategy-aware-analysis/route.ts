@@ -112,14 +112,17 @@ export async function POST(request: NextRequest) {
           reasoning: 'Fundamental analysis weighted for ' + result.strategy + ' strategy'
         },
 
+        // 🎯 TPSL (Take Profit, Stop Loss) Data - Critical for UI display
+        tpslRecommendations: result.tpslRecommendations,
+
         keyRisks: result.reasoning.risks,
         catalysts: result.reasoning.catalysts.map(catalyst => ({
           type: 'positive',
           description: catalyst,
           impact: 'medium'
         })),
-        citedSources: [], // TODO: Implement source tracking
-        agentChain: [
+        citedSources: result.citedSources || [],
+        agentChain: result.agentChain || [
           'StrategyConfiguration',
           'TechnicalAnalysis',
           'FundamentalAnalysis', 
@@ -127,7 +130,15 @@ export async function POST(request: NextRequest) {
           'MarketStructure',
           'FinalSynthesis'
         ],
-        totalProcessingTime: processingTime,
+        totalProcessingTime: result.totalProcessingTime || processingTime,
+
+        // Pass through all sequential analysis data for complete UI display
+        quantAnalysis: result.quantAnalysis,
+        marketAnalysis: result.marketAnalysis,
+        technicalAnalysis: result.technicalAnalysis,
+        sentimentAnalysis: result.sentimentAnalysis,
+        fundamentalAnalysis: result.fundamentalAnalysis,
+        executiveSummary: result.executiveSummary,
 
         // Enhanced strategy-specific data
         strategyOutput: result // Include full strategy output for enhanced UI

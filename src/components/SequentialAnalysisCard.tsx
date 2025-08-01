@@ -281,6 +281,50 @@ const SequentialAnalysisCard: React.FC<SequentialAnalysisCardProps> = ({
               </div>
             </div>
 
+            {/* TPSL Recommendations Section */}
+            {result.tpslRecommendations && (
+              <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm p-6 rounded-xl border border-green-500/20 shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="flex items-center space-x-2 mb-6">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  <h3 className="text-xl font-bold text-green-300">Take Profit & Stop Loss</h3>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="text-center p-4 glass-light rounded-xl border border-green-500/20">
+                    <p className="text-gray-400 text-sm uppercase tracking-wide mb-2">Entry Price</p>
+                    <p className="text-2xl font-bold text-green-400">${result.tpslRecommendations.entryPrice}</p>
+                  </div>
+                  <div className="text-center p-4 glass-light rounded-xl border border-green-500/20">
+                    <p className="text-gray-400 text-sm uppercase tracking-wide mb-2">Take Profit 1</p>
+                    <p className="text-2xl font-bold text-green-400">${result.tpslRecommendations.takeProfit1}</p>
+                  </div>
+                  <div className="text-center p-4 glass-light rounded-xl border border-red-500/20">
+                    <p className="text-gray-400 text-sm uppercase tracking-wide mb-2">Stop Loss</p>
+                    <p className="text-2xl font-bold text-red-400">${result.tpslRecommendations.stopLoss}</p>
+                  </div>
+                  <div className="text-center p-4 glass-light rounded-xl border border-blue-500/20">
+                    <p className="text-gray-400 text-sm uppercase tracking-wide mb-2">Risk:Reward</p>
+                    <p className="text-2xl font-bold text-blue-400">{result.tpslRecommendations.riskRewardRatio}</p>
+                  </div>
+                </div>
+                {result.tpslRecommendations.takeProfit2 && (
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="text-center p-4 glass-light rounded-xl border border-green-500/20">
+                      <p className="text-gray-400 text-sm uppercase tracking-wide mb-2">Take Profit 2</p>
+                      <p className="text-xl font-bold text-green-400">${result.tpslRecommendations.takeProfit2}</p>
+                    </div>
+                    <div className="text-center p-4 glass-light rounded-xl border border-yellow-500/20">
+                      <p className="text-gray-400 text-sm uppercase tracking-wide mb-2">Position Size</p>
+                      <p className="text-xl font-bold text-yellow-400">{result.tpslRecommendations.positionSize}</p>
+                    </div>
+                  </div>
+                )}
+                <div className="glass-light rounded-xl p-4 border border-green-500/20">
+                  <p className="text-sm text-green-300 uppercase tracking-wide mb-3 font-medium">TPSL Reasoning</p>
+                  <p className="text-gray-200 leading-relaxed">{result.tpslRecommendations.reasoning}</p>
+                </div>
+              </div>
+            )}
+
             {/* Quantitative Analysis Summary */}
             {result.quantAnalysis && (
               <div className="premium-card p-6 hover-lift">
@@ -352,15 +396,52 @@ const SequentialAnalysisCard: React.FC<SequentialAnalysisCardProps> = ({
                     Citations ({result.citedSources.length})
                   </h3>
                 </div>
-                <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
-                  {result.citedSources.slice(0, 5).map((source, index) => (
-                    <div key={index} className="p-2 glass-light rounded-lg border border-white/10">
-                      <p className="text-blue-300 font-medium text-sm">
-                        {index + 1}.
-                      </p>
-                      <p className="text-gray-300 text-sm truncate mt-1">{source}</p>
-                    </div>
-                  ))}
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                  {result.citedSources.slice(0, 8).map((source, index) => {
+                    // Extract domain name for cleaner display
+                    const getSourceName = (url: string) => {
+                      try {
+                        const domain = new URL(url).hostname.replace('www.', '');
+                        const domainNames: { [key: string]: string } = {
+                          'bloomberg.com': 'Bloomberg',
+                          'reuters.com': 'Reuters', 
+                          'cnbc.com': 'CNBC',
+                          'marketwatch.com': 'MarketWatch',
+                          'wsj.com': 'Wall Street Journal',
+                          'yahoo.com': 'Yahoo Finance',
+                          'sec.gov': 'SEC Filing',
+                          'fool.com': 'Motley Fool',
+                          'seekingalpha.com': 'Seeking Alpha'
+                        };
+                        return domainNames[domain] || domain;
+                      } catch {
+                        return 'Financial Source';
+                      }
+                    };
+                    
+                    return (
+                      <div key={index} className="p-3 glass-light rounded-lg border border-white/10 hover:border-blue-500/30 transition-colors">
+                        <div className="flex items-start space-x-3">
+                          <div className="w-6 h-6 bg-blue-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span className="text-blue-400 text-xs font-bold">{index + 1}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-blue-300 font-semibold text-sm mb-1">
+                              {getSourceName(source)}
+                            </p>
+                            <a 
+                              href={source} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="text-gray-400 text-xs hover:text-blue-300 transition-colors break-all"
+                            >
+                              {source.length > 60 ? `${source.substring(0, 60)}...` : source}
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                   {result.citedSources.length > 5 && (
                     <p className="text-gray-400 text-sm text-center py-2">
                       + {result.citedSources.length - 5} more sources

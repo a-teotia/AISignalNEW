@@ -3,6 +3,7 @@ import { createDataProviderOrchestrator } from '../services';
 interface FundamentalAgentInput {
   symbol: string;
   previousAnalysis?: any;
+  strategy?: 'day' | 'swing' | 'longterm'; // 🎯 NEW: Strategy context for prompts
 }
 
 interface FundamentalAgentOutput {
@@ -68,8 +69,8 @@ export class FundamentalAnalysisAgent {
         }
       }
 
-      // 2. Create comprehensive fundamental analysis prompt
-      const prompt = this.createFundamentalPrompt(input.symbol, fundamentalData, input.previousAnalysis);
+      // 2. Create comprehensive fundamental analysis prompt with strategy context
+      const prompt = this.createFundamentalPrompt(input.symbol, fundamentalData, input.previousAnalysis, input.strategy);
 
       // 3. Send to Perplexity Sonar for analysis
       const response = await fetch(this.baseUrl, {
@@ -86,8 +87,8 @@ export class FundamentalAnalysisAgent {
               content: prompt
             }
           ],
-          max_tokens: 4000,
-          temperature: 0.1,
+          max_tokens: 8000, // 🎯 Increased for better quality fundamental analysis
+          temperature: 0.3, // 🎯 Slightly higher for more nuanced analysis
           stream: false
         }),
       });
@@ -148,7 +149,7 @@ export class FundamentalAnalysisAgent {
     }
   }
 
-  private createFundamentalPrompt(symbol: string, fundamentalData: any, previousAnalysis: any): string {
+  private createFundamentalPrompt(symbol: string, fundamentalData: any, previousAnalysis: any, strategy?: string): string {
     let prompt = `You are a FUNDAMENTAL ANALYSIS EXPERT specializing in earnings analysis, analyst sentiment, and corporate events. You have access to real-time internet data and financial databases.
 
 Your expertise includes:
@@ -162,7 +163,40 @@ Always provide specific, actionable insights with confidence scores.
 
 FUNDAMENTAL ANALYSIS REQUEST for ${symbol}
 
-TASK: Perform comprehensive fundamental analysis for ${symbol} focusing on:
+`;
+
+    // 🎯 ADD STRATEGY-AWARE CONTEXT (Use same pattern as other agents)
+    if (strategy) {
+      const strategyContexts = {
+        day: `🎯 TRADING STRATEGY: DAY TRADING
+- Focus: Intraday opportunities (hours to 1 day)
+- Key Elements: Earnings proximity, breaking news impact, analyst changes TODAY
+- Priority: Only immediate fundamental catalysts that move stocks intraday
+- Timeframes: Today's earnings, same-day analyst updates, breaking SEC filings
+- Self-Assessment: How relevant is your fundamental analysis for INTRADAY trading? (0-100%)`,
+
+        swing: `🎯 TRADING STRATEGY: SWING TRADING  
+- Focus: Multi-day positions (2-10 days)
+- Key Elements: Upcoming earnings (within 2 weeks), recent analyst changes, event catalysts
+- Priority: Fundamental events that create momentum over days/weeks
+- Timeframes: Next 2 weeks earnings, recent upgrades/downgrades, corporate announcements
+- Self-Assessment: How relevant is your fundamental analysis for SWING trading? (0-100%)`,
+
+        longterm: `🎯 TRADING STRATEGY: LONG-TERM INVESTING
+- Focus: Position trading (2 weeks to 6 months)
+- Key Elements: Deep value analysis, growth prospects, competitive position, long-term trends
+- Priority: Comprehensive fundamental thesis for extended holding periods
+- Timeframes: Quarterly trends, annual guidance, strategic initiatives, industry outlook
+- Self-Assessment: How relevant is your fundamental analysis for LONG-TERM positions? (0-100%)`
+      };
+
+      const strategyContext = strategyContexts[strategy as keyof typeof strategyContexts];
+      if (strategyContext) {
+        prompt += strategyContext + '\n\n';
+      }
+    }
+
+    prompt += `TASK: Perform comprehensive fundamental analysis for ${symbol} focusing on:
 1. EARNINGS ANALYSIS - Growth trends, beat/miss probability, guidance
 2. ANALYST SENTIMENT - Recent upgrades/downgrades, consensus changes
 3. EVENT RISK ASSESSMENT - Earnings proximity, SEC filings, corporate events

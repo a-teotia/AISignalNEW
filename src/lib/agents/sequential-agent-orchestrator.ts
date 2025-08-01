@@ -85,9 +85,9 @@ export class SequentialAgentOrchestrator {
 
   /**
    * Run the sequential agent chain for comprehensive analysis
-   * Agent 1 → Agent 2 → Agent 3 → Agent 4 → Final Agent
+   * Agent 1 → Agent 2 → Agent 3 → Agent 4 → Agent 5 → Final Agent
    */
-  async runSequentialAnalysis(symbol: string): Promise<FinalReport> {
+  async runSequentialAnalysis(symbol: string, strategy?: 'day' | 'swing' | 'longterm'): Promise<FinalReport> {
     const startTime = Date.now();
     console.log(`🔄 Starting enhanced sequential analysis chain for ${symbol}...`);
 
@@ -96,6 +96,7 @@ export class SequentialAgentOrchestrator {
       console.log('📈 Agent 1: Quantitative Data Analysis...');
       const quantAnalysis = await this.runQuantitativeAnalysisAgent({
         symbol,
+        strategy, // 🎯 Pass strategy for prompt awareness
         previousAnalysis: null
       });
 
@@ -103,6 +104,7 @@ export class SequentialAgentOrchestrator {
       console.log('📊 Agent 2: Market Fundamentals Analysis...');
       const marketAnalysis = await this.runMarketAnalysisAgent({
         symbol,
+        strategy, // 🎯 Pass strategy for prompt awareness
         previousAnalysis: quantAnalysis.nextAgentInput
       });
 
@@ -110,6 +112,7 @@ export class SequentialAgentOrchestrator {
       console.log('📈 Agent 3: Technical Analysis...');
       const technicalAnalysis = await this.runTechnicalAnalysisAgent({
         symbol,
+        strategy, // 🎯 Pass strategy for prompt awareness
         previousAnalysis: {
           quantData: quantAnalysis.nextAgentInput,
           marketData: marketAnalysis.nextAgentInput
@@ -120,6 +123,7 @@ export class SequentialAgentOrchestrator {
       console.log('🗞️ Agent 4: Sentiment Analysis...');
       const sentimentAnalysis = await this.runSentimentAnalysisAgent({
         symbol,
+        strategy, // 🎯 Pass strategy for prompt awareness
         previousAnalysis: {
           quantData: quantAnalysis.nextAgentInput,
           marketData: marketAnalysis.nextAgentInput,
@@ -131,6 +135,7 @@ export class SequentialAgentOrchestrator {
       console.log('🏛️ Agent 5: Fundamental Analysis...');
       const fundamentalAnalysis = await this.fundamentalAgent.runFundamentalAnalysis({
         symbol,
+        strategy, // 🎯 Pass strategy for prompt awareness
         previousAnalysis: {
           quantData: quantAnalysis.nextAgentInput,
           marketData: marketAnalysis.nextAgentInput,
@@ -143,6 +148,7 @@ export class SequentialAgentOrchestrator {
       console.log('🎯 Final Agent: Synthesis & Report...');
       const finalReport = await this.runFinalSynthesisAgent({
         symbol,
+        strategy, // 🎯 Pass strategy for prompt awareness
         previousAnalysis: {
           quantAnalysis: quantAnalysis.data,
           marketAnalysis: marketAnalysis.data,
@@ -394,8 +400,13 @@ Return ONLY valid JSON:
         sources: comprehensiveData.sources?.length || 0
       });
 
+      // 🎯 STRATEGY-AWARE PROMPT
+      const strategyContext = this.getStrategyContext(input.strategy);
+      
       // Create detailed quantitative analysis prompt with all available data
       const prompt = `You are a senior quantitative analyst specializing in financial data analysis. Analyze the comprehensive market data for ${input.symbol}.
+
+${strategyContext}
 
 COMPREHENSIVE MARKET DATA:
 ${JSON.stringify(comprehensiveData, null, 2)}
@@ -403,13 +414,32 @@ ${JSON.stringify(comprehensiveData, null, 2)}
 COMPREHENSIVE NEWS & SENTIMENT DATA:
 ${JSON.stringify(newsData, null, 2)}
 
-QUANTITATIVE ANALYSIS TASKS:
-1. Price Action Analysis: Current price, volume, volatility patterns
-2. Technical Indicators: RSI, MACD, Moving Averages, Bollinger Bands
-3. Volume Analysis: Volume trends, unusual activity, institutional flow indicators
-4. Market Microstructure: Bid-ask spreads, order flow, liquidity analysis
-5. Risk Metrics: Historical volatility, beta, correlation analysis
-6. Statistical Analysis: Price distribution, momentum indicators, mean reversion signals
+🎯 STRATEGY-SPECIFIC QUANTITATIVE TASKS:
+${input.strategy === 'day' ? `
+1. INTRADAY PRICE ACTION: Focus on minute-level price movements, intraday volatility spikes
+2. VOLUME ANALYSIS: Real-time volume surges, unusual trading activity within the day  
+3. TECHNICAL INDICATORS: Short-term RSI (15min), VWAP deviations, intraday momentum
+4. MARKET MICROSTRUCTURE: Bid-ask spread changes, order flow imbalances for day trading
+5. LIQUIDITY METRICS: Real-time liquidity, market depth for quick entries/exits
+6. INTRADAY PATTERNS: Opening gaps, lunch-time consolidation, closing hour activity
+7. Self-Assessment: How relevant is your quantitative data for INTRADAY trading? (0-100%)
+` : input.strategy === 'swing' ? `
+1. MULTI-DAY PRICE ACTION: 2-10 day price patterns, intermediate volatility analysis
+2. VOLUME TRENDS: Weekly volume patterns, institutional accumulation/distribution over days
+3. TECHNICAL INDICATORS: Daily RSI, MACD crossovers, moving average interactions
+4. MOMENTUM ANALYSIS: Multi-day momentum shifts, trend strength over swing timeframes
+5. VOLATILITY PATTERNS: Multi-day volatility cycles, earnings-related vol expansion
+6. STATISTICAL METRICS: Mean reversion patterns over 2-10 day periods
+7. Self-Assessment: How relevant is your quantitative data for SWING trading? (0-100%)
+` : `
+1. LONG-TERM PRICE TRENDS: Monthly/quarterly price patterns, secular trend analysis
+2. VOLUME ANALYSIS: Long-term institutional flow, accumulation patterns over months
+3. VALUATION METRICS: P/E trends, price-to-book evolution, long-term value indicators
+4. MACRO CORRELATIONS: Correlation with indices, sectors, economic indicators over time
+5. STATISTICAL ANALYSIS: Long-term mean reversion, cyclical patterns, secular trends
+6. RISK METRICS: Long-term volatility, beta stability, drawdown analysis
+7. Self-Assessment: How relevant is your quantitative data for LONG-TERM investing? (0-100%)
+`}
 
 CRITICAL: Focus on quantitative metrics and statistical analysis. Provide specific numbers and calculations.
 
@@ -992,7 +1022,12 @@ Return ONLY valid JSON:
   protected async runFinalSynthesisAgent(input: SequentialAgentInput): Promise<SequentialAgentOutput> {
     const { quantAnalysis, marketAnalysis, technicalAnalysis, sentimentAnalysis, fundamentalAnalysis } = input.previousAnalysis;
     
+    // 🎯 STRATEGY-AWARE PROMPT
+    const strategyContext = this.getStrategyContext(input.strategy);
+    
     const prompt = `You are the Chief Investment Officer making final investment recommendations. Synthesize all analysis for ${input.symbol}.
+
+${strategyContext}
 
 COMPLETE ANALYSIS CHAIN (6 AGENTS):
 QUANTITATIVE ANALYSIS (Agent 1): ${JSON.stringify(quantAnalysis, null, 2)}
@@ -1004,22 +1039,36 @@ SENTIMENT ANALYSIS (Agent 4): ${JSON.stringify(sentimentAnalysis, null, 2)}
 COMPREHENSIVE NEWS & SENTIMENT DATA (Integrated Across All Agents):
 ${JSON.stringify(sentimentAnalysis?.nextAgentInput?.comprehensiveNewsData || technicalAnalysis?.nextAgentInput?.comprehensiveNewsData, null, 2)}
 
-SYNTHESIS TASKS:
-1. Integrate quantitative, market, technical, sentiment, and FUNDAMENTAL analysis from all 5 agents
-2. Pay special attention to the FUNDAMENTAL ANALYSIS (Agent 5) which includes:
-   - Premium earnings data and analyst consensus
-   - Earnings proximity and volatility risk assessment
-   - Analyst upgrades/downgrades sentiment
-   - SEC filings significance
-   - Corporate events and calendar analysis
-3. Leverage the comprehensive news analysis (Bloomberg, Reddit, Twitter, analyst reports) throughout the synthesis
-4. Cross-validate all findings with the real-time news sentiment and social media analysis
-5. Weight each analysis type based on current market conditions and news-driven factors
-6. Assess how fundamental catalysts (earnings, analyst changes, SEC filings) impact technical and sentiment projections
-7. Generate specific price targets considering fundamental valuations, news-driven volatility, and sentiment momentum
-8. Provide final BUY/SELL/HOLD recommendation integrating ALL SIX analysis dimensions
+🎯 STRATEGY-SPECIFIC SYNTHESIS TASKS:
+${input.strategy === 'day' ? `
+1. INTRADAY SYNTHESIS: Prioritize quantitative (volume, VWAP) and technical analysis (short-term patterns)
+2. IMMEDIATE CATALYSTS: Focus on fundamental events happening TODAY (earnings, FDA approvals, breaking news)
+3. SENTIMENT URGENCY: Weight breaking news and real-time social sentiment heavily
+4. RISK MANAGEMENT: Quick stop-losses, tight profit-taking for intraday positions
+5. TIME HORIZON: 1-day maximum holding period, focus on immediate price action
+6. DECISION WEIGHTING: Technical 40%, Quantitative 30%, News/Sentiment 20%, Fundamental 10%
+7. Self-Assessment: How confident is your synthesis for INTRADAY trading decisions? (0-100%)
+` : input.strategy === 'swing' ? `
+1. BALANCED SYNTHESIS: Equal weighting of all analysis types for multi-day perspective
+2. EVENT CATALYSTS: Focus on upcoming earnings (2-10 days), analyst events, corporate announcements
+3. MOMENTUM ANALYSIS: Combine technical trends with fundamental momentum and sentiment shifts
+4. RISK-REWARD: Target 2-10 day moves with balanced risk management
+5. TIME HORIZON: 2-10 day holding period, capture intermediate moves
+6. DECISION WEIGHTING: Technical 25%, Fundamental 25%, Quantitative 20%, Sentiment 20%, Market 10%
+7. Self-Assessment: How confident is your synthesis for SWING trading decisions? (0-100%)
+` : `
+1. LONG-TERM SYNTHESIS: Prioritize fundamental analysis (earnings growth, valuation, competitive position)
+2. STRATEGIC CATALYSTS: Focus on long-term themes, quarterly trends, strategic initiatives
+3. VALUE INTEGRATION: Deep fundamental analysis with long-term technical trend confirmation
+4. PATIENCE FOCUS: Long-term wealth building, sustainable competitive advantages
+5. TIME HORIZON: 2 weeks to 6 months, focus on fundamental value creation
+6. DECISION WEIGHTING: Fundamental 50%, Market/Macro 20%, Technical 15%, Quantitative 10%, Sentiment 5%
+7. Self-Assessment: How confident is your synthesis for LONG-TERM investment decisions? (0-100%)
+`}
 
-CRITICAL: Your recommendation must integrate ALL aspects including the comprehensive news, social media sentiment, AND premium fundamental analysis data.
+CRITICAL: Your recommendation must integrate ALL SIX agents but WEIGHT them according to the selected trading strategy.
+CRITICAL: Focus on the time horizon and risk tolerance appropriate for the strategy.
+CRITICAL: Self-assess your overall synthesis confidence for the specific strategy selected.
 
 CRITICAL: Provide detailed reasoning and cite specific sources from all previous agents.
 
@@ -1042,6 +1091,15 @@ Return ONLY valid JSON:
     "timeHorizon": "3-6 months",
     "risk": "LOW|MEDIUM|HIGH",
     "reasoning": "Detailed reasoning citing specific analysis points"
+  },
+  "tpslRecommendations": {
+    "takeProfit1": 165.00,
+    "takeProfit2": 175.00,
+    "stopLoss": 142.00,
+    "entryPrice": 150.00,
+    "riskRewardRatio": "1:2.5",
+    "positionSize": "3-5% of portfolio",
+    "reasoning": "TP1 at resistance level, TP2 at extension target, SL below key support"
   },
   "riskAssessment": {
     "keyRisks": [
@@ -1183,8 +1241,8 @@ Return ONLY valid JSON:
               content: prompt
             }
           ],
-          temperature: 0.1,
-          max_tokens: 4000,
+          temperature: 0.3, // 🎯 Slightly higher for more nuanced analysis
+          max_tokens: 8000, // 🎯 Increased for better quality financial analysis
           stream: false
         }),
       });
