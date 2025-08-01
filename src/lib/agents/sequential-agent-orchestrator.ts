@@ -5,6 +5,7 @@ import { FundamentalAnalysisAgent } from './fundamental-analysis-agent';
 interface SequentialAgentInput {
   symbol: string;
   previousAnalysis?: any; // Input from previous agent
+  strategy?: 'day' | 'swing' | 'longterm'; // 🎯 NEW: Strategy context for prompts
 }
 
 interface SequentialAgentOutput extends AgentOutput {
@@ -39,7 +40,7 @@ interface FinalReport {
 export class SequentialAgentOrchestrator {
   private perplexityApiKey: string;
   private baseUrl = 'https://api.perplexity.ai/chat/completions';
-  private fundamentalAgent: FundamentalAnalysisAgent; // 🎯 NEW: Fundamental agent instance
+  protected fundamentalAgent: FundamentalAnalysisAgent; // 🎯 NEW: Fundamental agent instance
 
   constructor() {
     this.perplexityApiKey = process.env.PERPLEXITY_API_KEY || '';
@@ -47,6 +48,39 @@ export class SequentialAgentOrchestrator {
       throw new Error('PERPLEXITY_API_KEY is required for sequential agents');
     }
     this.fundamentalAgent = new FundamentalAnalysisAgent(); // 🎯 Initialize fundamental agent
+  }
+
+  // 🎯 STRATEGY-AWARE PROMPT GENERATION
+  protected getStrategyContext(strategy?: string): string {
+    if (!strategy) return '';
+    
+    const strategyContexts = {
+      day: `
+🎯 TRADING STRATEGY: DAY TRADING
+- Focus: Intraday opportunities (hours to 1 day)
+- Key Elements: Quick entries/exits, high volatility, clean support/resistance levels
+- Priority: Real-time technical patterns, volume spikes, breaking news impact
+- Timeframes: 15-minute to 1-hour charts
+- Self-Assessment: How relevant is your analysis for INTRADAY trading? (0-100%)`,
+      
+      swing: `
+🎯 TRADING STRATEGY: SWING TRADING  
+- Focus: Multi-day positions (2-10 days)
+- Key Elements: Intermediate moves, balanced analysis approach
+- Priority: Trend analysis, earnings events, sentiment shifts, key technical levels
+- Timeframes: 4-hour to daily charts
+- Self-Assessment: How relevant is your analysis for SWING trading? (0-100%)`,
+      
+      longterm: `
+🎯 TRADING STRATEGY: LONG-TERM INVESTING
+- Focus: Position trading (2 weeks to 6 months) 
+- Key Elements: Fundamental value, growth prospects, long-term themes
+- Priority: Earnings growth, valuation metrics, competitive advantages, macro trends
+- Timeframes: Weekly to monthly analysis
+- Self-Assessment: How relevant is your analysis for LONG-TERM investing? (0-100%)`
+    };
+    
+    return strategyContexts[strategy as keyof typeof strategyContexts] || '';
   }
 
   /**
@@ -561,10 +595,15 @@ Return ONLY valid JSON:
    * Uses Perplexity Sonar for internet research on company fundamentals
    * Now builds on quantitative analysis from Agent 1
    */
-  private async runMarketAnalysisAgent(input: SequentialAgentInput): Promise<SequentialAgentOutput> {
+  protected async runMarketAnalysisAgent(input: SequentialAgentInput): Promise<SequentialAgentOutput> {
     const quantData = input.previousAnalysis;
     
+    // 🎯 STRATEGY-AWARE PROMPT
+    const strategyContext = this.getStrategyContext(input.strategy);
+    
     const prompt = `You are a senior equity research analyst. Conduct comprehensive market and fundamental analysis for ${input.symbol}.
+
+${strategyContext}
 
 QUANTITATIVE DATA FROM AGENT 1:
 ${JSON.stringify(quantData, null, 2)}
@@ -572,11 +611,34 @@ ${JSON.stringify(quantData, null, 2)}
 COMPREHENSIVE NEWS & SENTIMENT DATA FROM AGENT 1:
 ${JSON.stringify(quantData?.comprehensiveNewsData, null, 2)}
 
-RESEARCH TASKS:
-1. Integrate the comprehensive news and sentiment data already collected from multiple sources
-2. Analyze the quantitative metrics alongside the news analysis, social media sentiment, and analyst activity
-3. Cross-reference the fundamental analysis with recent news developments and market sentiment
-4. Assess how recent news developments (earnings, guidance, corporate updates) impact fundamental valuation
+🎯 STRATEGY-SPECIFIC RESEARCH TASKS:
+${input.strategy === 'day' ? `
+1. Focus on IMMEDIATE fundamental catalysts (earnings TODAY, breaking news, FDA approvals)
+2. Analyze how breaking fundamental news could drive intraday price action
+3. Check for any same-day events that could impact stock movement
+4. Assess if fundamental news creates trading opportunities within hours
+5. Consider: Are there fundamental catalysts that day traders should know about?
+6. Priority: TODAY'S fundamental events over long-term fundamental strength
+` : input.strategy === 'swing' ? `
+1. Analyze upcoming fundamental events in the next 2-10 days (earnings, guidance, conferences)
+2. Evaluate how fundamental developments could drive multi-day moves
+3. Cross-reference fundamental health with potential swing trading catalysts
+4. Assess fundamental momentum vs current valuation for intermediate moves
+5. Consider both fundamental value AND upcoming catalysts for swing positions
+6. Balance fundamental analysis with event-driven opportunities
+` : `
+1. Conduct DEEP fundamental analysis focusing on long-term value creation
+2. Analyze earnings growth trends, competitive advantages, and market position
+3. Evaluate long-term fundamental trends and business model sustainability
+4. Assess intrinsic value vs current price for long-term investment decisions
+5. Focus on fundamental factors that matter over 6+ month timeframes
+6. Prioritize business quality, growth prospects, and sustainable competitive advantages
+`}
+
+🎯 CRITICAL: At the end of your analysis, provide your STRATEGY RELEVANCE ASSESSMENT:
+- How relevant is your fundamental analysis specifically for ${input.strategy?.toUpperCase()} trading? (0-100%)
+- Consider: Do fundamental factors favor this trading approach and timeframe?
+- Justify your relevance score based on fundamental setup and strategy requirements.
 5. Evaluate analyst consensus changes and institutional sentiment shifts
 6. Identify fundamental catalysts that align with or contradict current news sentiment
 7. Use internet research to supplement and validate the existing comprehensive news data
@@ -663,23 +725,51 @@ Return ONLY valid JSON with this structure:
    * AGENT 3: Technical Analysis Agent  
    * Builds on quantitative data (Agent 1) and fundamental analysis (Agent 2)
    */
-  private async runTechnicalAnalysisAgent(input: SequentialAgentInput): Promise<SequentialAgentOutput> {
+  protected async runTechnicalAnalysisAgent(input: SequentialAgentInput): Promise<SequentialAgentOutput> {
     const { quantData, marketData } = input.previousAnalysis;
     
+    // 🎯 STRATEGY-AWARE PROMPT
+    const strategyContext = this.getStrategyContext(input.strategy);
+    
     const prompt = `You are a quantitative analyst specializing in technical analysis. Analyze ${input.symbol} technical patterns and price action.
+
+${strategyContext}
 
 QUANTITATIVE DATA FROM AGENT 1: ${JSON.stringify(quantData)}
 FUNDAMENTAL ANALYSIS FROM AGENT 2: ${JSON.stringify(marketData)}
 COMPREHENSIVE NEWS & SENTIMENT DATA: ${JSON.stringify(marketData?.comprehensiveNewsData)}
 
-RESEARCH TASKS:
-1. Analyze technical patterns while considering news sentiment and market psychology  
-2. Evaluate how recent news developments and social media sentiment might impact technical levels
-3. Cross-reference institutional flow analysis with comprehensive news data on analyst activity
-4. Assess whether technical momentum aligns with or diverges from fundamental news sentiment
-5. Identify technical breakout/breakdown levels that could be triggered by news catalysts
-6. Integrate quantitative metrics, fundamental insights, and comprehensive news analysis
-7. Use options flow and institutional activity data to validate news-driven market sentiment
+🎯 STRATEGY-SPECIFIC RESEARCH TASKS:
+${input.strategy === 'day' ? `
+1. Focus on INTRADAY technical patterns (15min-1hour charts)
+2. Identify key support/resistance levels for day trading
+3. Analyze volume spikes and momentum indicators for quick entries/exits
+4. Assess volatility levels - high volatility favors day trading
+5. Look for clean technical setups that work in 1-day timeframe
+6. Consider how breaking news might trigger immediate technical moves
+7. Evaluate if current technical setup favors rapid intraday moves
+` : input.strategy === 'swing' ? `
+1. Analyze multi-day technical patterns (4hour-daily charts)
+2. Identify trend continuation vs reversal setups
+3. Evaluate technical levels that matter for 2-10 day holds
+4. Assess momentum indicators for intermediate-term moves
+5. Cross-reference technical analysis with upcoming earnings/events
+6. Look for technical setups that align with fundamental catalysts
+7. Consider both technical and fundamental factors for balanced analysis
+` : `
+1. Focus on LONG-TERM technical trends (weekly-monthly charts)
+2. Identify major support/resistance levels for position sizing
+3. Analyze long-term trend strength and sustainability
+4. Use technical analysis primarily for entry timing optimization
+5. Consider technical factors mainly as entry/exit refinement
+6. Focus on whether technical setup supports fundamental thesis
+7. Evaluate if technical patterns confirm long-term investment thesis
+`}
+
+🎯 CRITICAL: At the end of your analysis, provide your STRATEGY RELEVANCE ASSESSMENT:
+- How relevant is your technical analysis specifically for ${input.strategy?.toUpperCase()} trading? (0-100%)
+- Consider: Do current technical patterns favor this trading style?
+- Justify your relevance score based on the technical setup and strategy requirements.
 
 Use internet sources for real-time data and technical analysis.
 
@@ -778,10 +868,15 @@ Return ONLY valid JSON:
    * AGENT 4: Sentiment & News Analysis Agent
    * Builds on quantitative (Agent 1), fundamental (Agent 2), and technical (Agent 3) analysis
    */
-  private async runSentimentAnalysisAgent(input: SequentialAgentInput): Promise<SequentialAgentOutput> {
+  protected async runSentimentAnalysisAgent(input: SequentialAgentInput): Promise<SequentialAgentOutput> {
     const { quantData, marketData, technicalData } = input.previousAnalysis;
     
+    // 🎯 STRATEGY-AWARE PROMPT
+    const strategyContext = this.getStrategyContext(input.strategy);
+    
     const prompt = `You are a market sentiment analyst. Synthesize and expand upon the comprehensive news and sentiment analysis for ${input.symbol}.
+
+${strategyContext}
 
 PREVIOUS ANALYSIS FROM AGENT CHAIN:
 QUANTITATIVE DATA (Agent 1): ${JSON.stringify(quantData)}
@@ -894,7 +989,7 @@ Return ONLY valid JSON:
    * FINAL AGENT: Synthesis & Report Generation
    * Combines all four previous agents into final verdict with citations
    */
-  private async runFinalSynthesisAgent(input: SequentialAgentInput): Promise<SequentialAgentOutput> {
+  protected async runFinalSynthesisAgent(input: SequentialAgentInput): Promise<SequentialAgentOutput> {
     const { quantAnalysis, marketAnalysis, technicalAnalysis, sentimentAnalysis, fundamentalAnalysis } = input.previousAnalysis;
     
     const prompt = `You are the Chief Investment Officer making final investment recommendations. Synthesize all analysis for ${input.symbol}.

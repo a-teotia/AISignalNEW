@@ -316,7 +316,7 @@ export default function Dashboard() {
   // Fetch recent sequential analyses
   const fetchRecentAnalyses = async () => {
     try {
-      const res = await fetch('/api/sequential-analysis');
+      const res = await fetch('/api/strategy-aware-analysis?history=true');
       const data = await res.json();
       if (data.success && data.analysisHistory) {
         // Transform the data to match our expected format with full analysis details

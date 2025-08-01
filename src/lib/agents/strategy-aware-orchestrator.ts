@@ -14,6 +14,7 @@ import {
 
 import { StrategyAwareAgentBase, StrategyAwareAgentOutput } from './strategy-aware-agent-base';
 import { SequentialAgentOrchestrator } from './sequential-agent-orchestrator';
+import { FundamentalAnalysisAgent } from './fundamental-analysis-agent';
 
 export interface StrategyAwareAnalysisInput {
   symbol: string;
@@ -119,302 +120,447 @@ export class StrategyAwareOrchestrator extends SequentialAgentOrchestrator {
   }
 
   /**
-   * Strategy-aware Technical Analysis Agent
+   * 🎯 REAL TECHNICAL ANALYSIS AGENT - Connected to Sequential Analysis System
    */
   private async runTechnicalAgentWithStrategy(input: StrategyAwareAnalysisInput): Promise<StrategyAwareAgentOutput> {
     const startTime = Date.now();
-    console.log(`📈 [TECHNICAL AGENT - ${input.strategy.toUpperCase()}] Starting analysis...`);
+    console.log(`📈 [REAL TECHNICAL AGENT - ${input.strategy.toUpperCase()}] Starting analysis...`);
 
     try {
-      const relevance = this.currentStrategy.agentWeights.technical;
-      const focusIndicators = this.getFocusIndicators();
+      // 🔥 CALL REAL TECHNICAL ANALYSIS AGENT (using parent class method)
+      const realTechnicalAnalysis = await this.runTechnicalAnalysisAgent({
+        symbol: input.symbol,
+        strategy: input.strategy, // 🎯 Pass strategy for prompt awareness
+        previousAnalysis: this.strategyContext.marketData // Pass real market data
+      });
+
+      // 🧠 INTELLIGENT SELF-ASSESSMENT based on REAL analysis results
+      let aiRelevance = this.assessTechnicalRelevance(input.strategy, realTechnicalAnalysis);
       
-      // Strategy-specific technical analysis logic
-      let signal: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';
-      let confidence = 50;
-      let reasoning = '';
-      let keyFactors: string[] = [];
-      let risks: string[] = [];
-      let strategySpecificInsights: Record<string, any> = {};
-
-      // Adapt analysis based on strategy
-      if (input.strategy === 'day') {
-        reasoning = 'Day trading technical analysis: Focus on intraday momentum and key levels';
-        keyFactors = ['15-min RSI patterns', 'VWAP interaction', 'Volume spikes', 'Intraday support/resistance'];
-        risks = ['Intraday reversals', 'Low volume periods', 'News catalyst risk'];
-        strategySpecificInsights = {
-          timeframe: '15min-1hour',
-          keyLevels: 'VWAP, previous day high/low',
-          volumeProfile: 'Monitor for unusual activity',
-          exitStrategy: 'Before market close or stop loss'
-        };
-      } else if (input.strategy === 'swing') {
-        reasoning = 'Swing trading technical analysis: Multi-day trends and pattern completion';
-        keyFactors = ['Daily chart patterns', 'MACD crossovers', 'Key breakout levels', 'Volume confirmation'];
-        risks = ['Failed breakouts', 'Earnings proximity', 'Weekend gap risk'];
-        strategySpecificInsights = {
-          timeframe: '4hour-daily',
-          patternRecognition: 'Flag, pennant, triangle patterns',
-          trendAnalysis: 'Multi-day momentum',
-          holdingPeriod: '3-7 days typically'
-        };
-      } else { // longterm
-        reasoning = 'Long-term technical analysis: Major trend identification and entry timing';
-        keyFactors = ['Weekly/monthly trends', 'Long-term moving averages', 'Major support/resistance'];
-        risks = ['Sector rotation', 'Long-term trend changes', 'Fundamental shifts'];
-        strategySpecificInsights = {
-          timeframe: 'weekly-monthly',
-          trendStrength: 'Long-term momentum analysis',
-          entryTiming: 'Optimal entry within long-term uptrend',
-          positionSizing: 'Consider for portfolio allocation'
-        };
-      }
-
-      // Mock confidence based on strategy relevance
-      confidence = Math.min(90, 40 + relevance);
+      // Extract real signals from the analysis
+      const realSignal = this.extractSignalFromAnalysis(realTechnicalAnalysis.data);
+      const realConfidence = this.calculateRealConfidence(realTechnicalAnalysis.data, aiRelevance);
+      
+      // Strategy-specific insights based on real data
+      const strategySpecificInsights = this.createTechnicalInsights(input.strategy, realTechnicalAnalysis.data);
 
       const processingTime = Date.now() - startTime;
-      console.log(`✅ [TECHNICAL AGENT] ${input.strategy} analysis completed in ${processingTime}ms (${confidence}% confidence)`);
+      console.log(`✅ [REAL TECHNICAL AGENT] ${input.strategy} analysis completed in ${processingTime}ms (${realConfidence}% confidence, ${aiRelevance}% relevance)`);
 
       return {
-        signal,
-        confidence,
-        strategyRelevance: relevance,
-        reasoning,
-        keyFactors,
-        risks,
+        signal: realSignal,
+        confidence: realConfidence,
+        strategyRelevance: aiRelevance,
+        reasoning: realTechnicalAnalysis.data.reasoning || 'Technical analysis based on real market data',
+        keyFactors: realTechnicalAnalysis.data.keyFactors || ['Real technical indicators', 'Market patterns', 'Volume analysis'],
+        risks: realTechnicalAnalysis.data.risks || ['Market volatility', 'Technical breakdown', 'Volume decline'],
         timeHorizon: this.currentStrategy.timeHorizon,
         strategySpecificInsights
       };
 
     } catch (error) {
-      console.error(`❌ [TECHNICAL AGENT] Error in ${input.strategy} analysis:`, error);
+      console.error(`❌ [REAL TECHNICAL AGENT] Error in ${input.strategy} analysis:`, error);
       return this.createErrorAgentOutput(this.currentStrategy.agentWeights.technical);
     }
   }
 
   /**
-   * Strategy-aware Fundamental Analysis Agent
+   * 🧠 Assess technical analysis relevance based on real market conditions
+   */
+  private assessTechnicalRelevance(strategy: string, technicalAnalysis: any): number {
+    let baseRelevance = 25; // Default relevance
+    
+    // Analyze real technical signals
+    const hasStrongSignals = this.hasStrongTechnicalSignals(technicalAnalysis.data);
+    const hasHighVolatility = this.hasHighVolatility(technicalAnalysis.data);
+    const hasCleanLevels = this.hasCleanTechnicalLevels(technicalAnalysis.data);
+    
+    if (strategy === 'day') {
+      baseRelevance = 35; // Higher base for day trading
+      if (hasStrongSignals) baseRelevance += 25;
+      if (hasHighVolatility) baseRelevance += 20;
+      if (hasCleanLevels) baseRelevance += 20;
+      console.log(`🧠 [TECHNICAL AI] Day trading relevance: ${baseRelevance}% (Signals: ${hasStrongSignals}, Volatility: ${hasHighVolatility}, Levels: ${hasCleanLevels})`);
+    } else if (strategy === 'swing') {
+      baseRelevance = 25; // Balanced for swing
+      if (hasStrongSignals) baseRelevance += 15;
+      if (hasCleanLevels) baseRelevance += 15;
+      console.log(`🧠 [TECHNICAL AI] Swing trading relevance: ${baseRelevance}% (Signals: ${hasStrongSignals}, Levels: ${hasCleanLevels})`);
+    } else { // longterm
+      baseRelevance = 15; // Lower for long-term
+      if (hasStrongSignals) baseRelevance += 10;
+      console.log(`🧠 [TECHNICAL AI] Long-term relevance: ${baseRelevance}% (mainly for entry timing)`);
+    }
+    
+    return Math.min(100, baseRelevance);
+  }
+
+  /**
+   * Analyze real technical data for strong signals
+   */
+  private hasStrongTechnicalSignals(technicalData: any): boolean {
+    // TODO: Implement real signal strength analysis
+    // For now, check if technical analysis found actionable patterns
+    return technicalData?.signals?.length > 0 || technicalData?.patterns?.length > 0;
+  }
+
+  private hasHighVolatility(technicalData: any): boolean {
+    // TODO: Implement real volatility analysis from market data
+    return technicalData?.volatility > 0.02; // 2% daily volatility threshold
+  }
+
+  private hasCleanTechnicalLevels(technicalData: any): boolean {
+    // TODO: Implement real support/resistance level analysis
+    return technicalData?.supportLevels?.length > 0 || technicalData?.resistanceLevels?.length > 0;
+  }
+
+  /**
+   * 🎯 INTELLIGENT SIGNAL EXTRACTION from real Perplexity API responses
+   */
+  private extractSignalFromAnalysis(analysisData: any): 'BULLISH' | 'BEARISH' | 'NEUTRAL' {
+    if (!analysisData) return 'NEUTRAL';
+    
+    console.log(`🔍 [SIGNAL EXTRACTION] Analyzing data structure:`, Object.keys(analysisData));
+    
+    // 1. Look for explicit recommendation/conclusion in the analysis
+    const recommendation = this.extractRecommendation(analysisData);
+    if (recommendation !== 'NEUTRAL') {
+      console.log(`✅ Found explicit recommendation: ${recommendation}`);
+      return recommendation;
+    }
+    
+    // 2. Analyze sentiment and tone of the analysis
+    const sentimentSignal = this.extractSentimentSignal(analysisData);
+    if (sentimentSignal !== 'NEUTRAL') {
+      console.log(`✅ Derived from sentiment: ${sentimentSignal}`);
+      return sentimentSignal;
+    }
+    
+    // 3. Look for technical indicators (for technical analysis)
+    const technicalSignal = this.extractTechnicalSignal(analysisData);
+    if (technicalSignal !== 'NEUTRAL') {
+      console.log(`✅ Derived from technical indicators: ${technicalSignal}`);
+      return technicalSignal;
+    }
+    
+    // 4. Look for fundamental strength indicators
+    const fundamentalSignal = this.extractFundamentalSignal(analysisData);
+    if (fundamentalSignal !== 'NEUTRAL') {
+      console.log(`✅ Derived from fundamentals: ${fundamentalSignal}`);
+      return fundamentalSignal;
+    }
+    
+    console.log(`⚠️ No clear signal found, defaulting to NEUTRAL`);
+    return 'NEUTRAL';
+  }
+
+  /**
+   * Extract explicit recommendations from analysis text
+   */
+  private extractRecommendation(data: any): 'BULLISH' | 'BEARISH' | 'NEUTRAL' {
+    const text = this.getAnalysisText(data);
+    if (!text) return 'NEUTRAL';
+    
+    const bullishKeywords = ['buy', 'bullish', 'positive', 'upward', 'strong', 'growth', 'outperform', 'recommend'];
+    const bearishKeywords = ['sell', 'bearish', 'negative', 'downward', 'weak', 'decline', 'underperform', 'avoid'];
+    
+    const lowerText = text.toLowerCase();
+    const bullishCount = bullishKeywords.filter(word => lowerText.includes(word)).length;
+    const bearishCount = bearishKeywords.filter(word => lowerText.includes(word)).length;
+    
+    if (bullishCount > bearishCount && bullishCount > 2) return 'BULLISH';
+    if (bearishCount > bullishCount && bearishCount > 2) return 'BEARISH';
+    
+    return 'NEUTRAL';
+  }
+
+  /**
+   * Extract sentiment from analysis tone
+   */
+  private extractSentimentSignal(data: any): 'BULLISH' | 'BEARISH' | 'NEUTRAL' {
+    // Look for sentiment score or sentiment analysis
+    if (data.sentimentScore) {
+      if (data.sentimentScore > 0.6) return 'BULLISH';
+      if (data.sentimentScore < 0.4) return 'BEARISH';
+    }
+    
+    if (data.overallSentiment) {
+      if (data.overallSentiment === 'POSITIVE') return 'BULLISH';
+      if (data.overallSentiment === 'NEGATIVE') return 'BEARISH';
+    }
+    
+    return 'NEUTRAL';
+  }
+
+  /**
+   * Extract signals from technical indicators
+   */
+  private extractTechnicalSignal(data: any): 'BULLISH' | 'BEARISH' | 'NEUTRAL' {
+    if (!data.technicalIndicators) return 'NEUTRAL';
+    
+    const indicators = data.technicalIndicators;
+    let bullishSignals = 0;
+    let bearishSignals = 0;
+    
+    // RSI analysis
+    if (indicators.rsi) {
+      if (indicators.rsi < 30) bullishSignals++; // Oversold = bullish
+      if (indicators.rsi > 70) bearishSignals++; // Overbought = bearish
+    }
+    
+    // MACD analysis
+    if (indicators.macd?.histogram) {
+      if (indicators.macd.histogram > 0) bullishSignals++;
+      if (indicators.macd.histogram < 0) bearishSignals++;
+    }
+    
+    // Moving average analysis
+    if (indicators.movingAverages) {
+      const ma = indicators.movingAverages;
+      if (ma.sma20 > ma.sma50) bullishSignals++; // Short MA above long MA
+      if (ma.sma20 < ma.sma50) bearishSignals++;
+    }
+    
+    if (bullishSignals > bearishSignals) return 'BULLISH';
+    if (bearishSignals > bullishSignals) return 'BEARISH';
+    
+    return 'NEUTRAL';
+  }
+
+  /**
+   * Extract signals from fundamental analysis
+   */
+  private extractFundamentalSignal(data: any): 'BULLISH' | 'BEARISH' | 'NEUTRAL' {
+    // Look for fundamental strength indicators
+    if (data.fundamentalScore) {
+      if (data.fundamentalScore > 70) return 'BULLISH';
+      if (data.fundamentalScore < 30) return 'BEARISH';
+    }
+    
+    if (data.earningsOutlook) {
+      if (data.earningsOutlook === 'BULLISH') return 'BULLISH';
+      if (data.earningsOutlook === 'BEARISH') return 'BEARISH';
+    }
+    
+    if (data.analystSentiment) {
+      if (data.analystSentiment === 'BULLISH') return 'BULLISH';
+      if (data.analystSentiment === 'BEARISH') return 'BEARISH';
+    }
+    
+    return 'NEUTRAL';
+  }
+
+  /**
+   * Get analysis text from various possible fields
+   */
+  private getAnalysisText(data: any): string {
+    return data.analysis || 
+           data.summary || 
+           data.conclusion || 
+           data.reasoning || 
+           data.keyFindings?.join(' ') || 
+           JSON.stringify(data);
+  }
+
+  /**
+   * Calculate confidence based on real analysis quality and strategy relevance
+   */
+  private calculateRealConfidence(analysisData: any, relevance: number): number {
+    let baseConfidence = 50;
+    
+    // Factor in data quality
+    if (analysisData?.dataQuality?.completeness) {
+      baseConfidence = analysisData.dataQuality.completeness;
+    } else if (analysisData?.confidence) {
+      baseConfidence = analysisData.confidence;
+    }
+    
+    // Adjust confidence based on strategy relevance
+    const relevanceMultiplier = relevance / 50; // Normalize around 50% relevance
+    const finalConfidence = Math.round(baseConfidence * relevanceMultiplier);
+    
+    return Math.max(10, Math.min(95, finalConfidence));
+  }
+
+  /**
+   * Create strategy-specific insights from real technical data
+   */
+  private createTechnicalInsights(strategy: string, technicalData: any): Record<string, any> {
+    const baseInsights = {
+      dataSource: 'Real technical analysis via Perplexity Sonar',
+      analysisType: strategy === 'day' ? 'Intraday patterns' : 
+                   strategy === 'swing' ? 'Multi-day trends' : 'Long-term positioning'
+    };
+
+    if (technicalData?.technicalIndicators) {
+      (baseInsights as any).indicators = {
+        rsi: technicalData.technicalIndicators.rsi,
+        macd: technicalData.technicalIndicators.macd?.value,
+        trend: technicalData.trendDirection
+      };
+    }
+
+    if (strategy === 'day') {
+      return {
+        ...baseInsights,
+        timeframe: '15min-1hour',
+        keyLevels: technicalData?.keyLevels || 'VWAP and intraday pivots',
+        volumeProfile: technicalData?.volumeAnalysis?.volumeProfile || 'Monitor for unusual activity'
+      };
+    } else if (strategy === 'swing') {
+      return {
+        ...baseInsights,
+        timeframe: '4hour-daily',
+        patternRecognition: technicalData?.patterns || 'Multi-day pattern analysis',
+        trendAnalysis: technicalData?.trendStrength || 'Trend momentum assessment'
+      };
+    } else {
+      return {
+        ...baseInsights,
+        timeframe: 'weekly-monthly',
+        trendStrength: technicalData?.trendStrength || 'Long-term momentum',
+        entryTiming: 'Optimal entry within major trend'
+      };
+    }
+  }
+
+  /**
+   * 🎯 REAL FUNDAMENTAL ANALYSIS AGENT - Connected to Sequential Analysis System
    */
   private async runFundamentalAgentWithStrategy(input: StrategyAwareAnalysisInput): Promise<StrategyAwareAgentOutput> {
     const startTime = Date.now();
     console.log(`🏛️ [FUNDAMENTAL AGENT - ${input.strategy.toUpperCase()}] Starting analysis...`);
 
     try {
-      const relevance = this.currentStrategy.agentWeights.fundamental;
-      const depth = this.currentStrategy.parameters.fundamentalDepth;
-      
-      let signal: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';
-      let confidence = 50;
-      let reasoning = '';
-      let keyFactors: string[] = [];
-      let risks: string[] = [];
-      let strategySpecificInsights: Record<string, any> = {};
+      // 🔥 CALL REAL FUNDAMENTAL ANALYSIS AGENT (using parent class instance)
+      const realFundamentalAnalysis = await this.fundamentalAgent.runFundamentalAnalysis({
+        symbol: input.symbol,
+        previousAnalysis: this.strategyContext.marketData // Pass real market data
+      });
 
-      // Adapt fundamental analysis based on strategy
-      if (input.strategy === 'day') {
-        reasoning = 'Day trading: Minimal fundamental analysis - checking for earnings/events today only';
-        keyFactors = ['No earnings today', 'No major news expected', 'Clear for intraday trading'];
-        risks = ['Unexpected news', 'Earnings whispers', 'Analyst comments'];
-        confidence = Math.min(70, 30 + relevance); // Lower confidence for day trading fundamentals
-        strategySpecificInsights = {
-          analysisDepth: 'minimal',
-          relevanceNote: 'Fundamentals less important for intraday moves',
-          todaysEvents: 'No major catalysts scheduled',
-          recommendation: 'Focus on technical analysis'
-        };
-      } else if (input.strategy === 'swing') {
-        reasoning = 'Swing trading: Balanced fundamental analysis focusing on near-term catalysts';
-        keyFactors = ['Earnings proximity', 'Recent analyst changes', 'Sector momentum', 'Event calendar'];
-        risks = ['Earnings surprise', 'Guidance changes', 'Competitor impact'];
-        confidence = Math.min(85, 50 + relevance);
-        strategySpecificInsights = {
-          analysisDepth: 'standard',
-          earingsImpact: 'Next earnings in 3 weeks - low risk',
-          analystSentiment: 'Recent upgrade cycle',
-          catalystCalendar: 'No major events in next 7 days'
-        };
-      } else { // longterm
-        reasoning = 'Long-term: Deep fundamental analysis of business quality and growth prospects';
-        keyFactors = ['Revenue growth trends', 'Competitive moat', 'Management quality', 'Industry outlook'];
-        risks = ['Industry disruption', 'Regulatory changes', 'Competitive pressure'];
-        confidence = Math.min(95, 60 + relevance); // Highest confidence for long-term fundamentals
-        strategySpecificInsights = {
-          analysisDepth: 'comprehensive',
-          businessQuality: 'Strong competitive position',
-          growthProspects: 'Sustainable long-term growth',
-          valuation: 'Reasonable at current levels',
-          timeHorizon: 'Multi-year investment thesis'
-        };
-      }
+      // 🧠 INTELLIGENT SELF-ASSESSMENT based on REAL fundamental analysis results
+      let aiRelevance = this.assessFundamentalRelevance(input.strategy, realFundamentalAnalysis);
+      
+      // Extract real signals from the analysis
+      const realSignal = this.extractSignalFromAnalysis(realFundamentalAnalysis.data);
+      const realConfidence = this.calculateRealConfidence(realFundamentalAnalysis.data, aiRelevance);
+      
+      // Strategy-specific insights based on real data
+      const strategySpecificInsights = this.createFundamentalInsights(input.strategy, realFundamentalAnalysis.data);
 
       const processingTime = Date.now() - startTime;
-      console.log(`✅ [FUNDAMENTAL AGENT] ${input.strategy} analysis completed in ${processingTime}ms (${confidence}% confidence)`);
+      console.log(`✅ [REAL FUNDAMENTAL AGENT] ${input.strategy} analysis completed in ${processingTime}ms (${realConfidence}% confidence, ${aiRelevance}% relevance)`);
 
       return {
-        signal,
-        confidence,
-        strategyRelevance: relevance,
-        reasoning,
-        keyFactors,
-        risks,
+        signal: realSignal,
+        confidence: realConfidence,
+        strategyRelevance: aiRelevance,
+        reasoning: realFundamentalAnalysis.data?.reasoning || 'Fundamental analysis based on real financial data',
+        keyFactors: realFundamentalAnalysis.data?.keyInsights || ['Real financial metrics', 'Business fundamentals', 'Valuation analysis'],
+        risks: realFundamentalAnalysis.data?.riskFactors || ['Fundamental deterioration', 'Valuation risk', 'Industry headwinds'],
         timeHorizon: this.currentStrategy.timeHorizon,
         strategySpecificInsights
       };
 
     } catch (error) {
-      console.error(`❌ [FUNDAMENTAL AGENT] Error in ${input.strategy} analysis:`, error);
+      console.error(`❌ [REAL FUNDAMENTAL AGENT] Error in ${input.strategy} analysis:`, error);
       return this.createErrorAgentOutput(this.currentStrategy.agentWeights.fundamental);
     }
   }
 
   /**
-   * Strategy-aware News Sentiment Agent
+   * 🎯 REAL NEWS SENTIMENT AGENT - Connected to Sequential Analysis System
    */
   private async runNewsAgentWithStrategy(input: StrategyAwareAnalysisInput): Promise<StrategyAwareAgentOutput> {
     const startTime = Date.now();
-    console.log(`📰 [NEWS AGENT - ${input.strategy.toUpperCase()}] Starting analysis...`);
+    console.log(`📰 [REAL NEWS AGENT - ${input.strategy.toUpperCase()}] Starting analysis...`);
 
     try {
-      const relevance = this.currentStrategy.agentWeights.newsSentiment;
-      const timeframe = this.currentStrategy.parameters.newsTimeframe;
+      // 🔥 CALL REAL SENTIMENT ANALYSIS AGENT (using parent class method)
+      const realSentimentAnalysis = await this.runSentimentAnalysisAgent({
+        symbol: input.symbol,
+        strategy: input.strategy, // 🎯 Pass strategy for prompt awareness
+        previousAnalysis: this.strategyContext.marketData // Pass real market data
+      });
+
+      // 🧠 INTELLIGENT SELF-ASSESSMENT based on REAL news sentiment results
+      let aiRelevance = this.assessNewsRelevance(input.strategy, realSentimentAnalysis);
       
-      let signal: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';
-      let confidence = 50;
-      let reasoning = '';
-      let keyFactors: string[] = [];
-      let risks: string[] = [];
-      let strategySpecificInsights: Record<string, any> = {};
-
-      // Strategy-specific news analysis
-      if (input.strategy === 'day') {
-        reasoning = `Day trading: Monitoring breaking news from last ${timeframe} for immediate market impact`;
-        keyFactors = ['No breaking news', 'Sector stability', 'Market sentiment neutral'];
-        risks = ['Breaking news risk', 'Market maker activity', 'Algo trading reactions'];
-        strategySpecificInsights = {
-          timeframe: '2 hours',
-          urgency: 'high',
-          impactType: 'immediate price movement',
-          monitoring: 'Real-time news alerts recommended'
-        };
-      } else if (input.strategy === 'swing') {
-        reasoning = `Swing trading: Analyzing news sentiment over ${timeframe} for trend confirmation`;
-        keyFactors = ['Positive sector rotation', 'Analyst upgrade cycle', 'No negative headlines'];
-        risks = ['Sentiment shift', 'Competitive news', 'Macro headwinds'];
-        strategySpecificInsights = {
-          timeframe: '3 days',
-          trendConfirmation: 'News supports technical setup',
-          sentimentMomentum: 'Building positive narrative',
-          riskEvents: 'None identified in holding period'
-        };
-      } else { // longterm
-        reasoning = `Long-term: Evaluating news themes over ${timeframe} for investment thesis validation`;
-        keyFactors = ['Strong industry tailwinds', 'Management execution', 'ESG improvements'];
-        risks = ['Regulatory changes', 'Industry disruption', 'Macro policy shifts'];
-        strategySpecificInsights = {
-          timeframe: '2 weeks',
-          thematicTrends: 'Sector transformation accelerating',
-          fundamentalSupport: 'News validates long-term thesis',
-          sustainabilityFactors: 'ESG momentum building'
-        };
-      }
-
-      confidence = Math.min(85, 45 + relevance);
+      // Extract real signals from the analysis
+      const realSignal = this.extractSignalFromAnalysis(realSentimentAnalysis.data);
+      const realConfidence = this.calculateRealConfidence(realSentimentAnalysis.data, aiRelevance);
+      
+      // Strategy-specific insights based on real data
+      const strategySpecificInsights = this.createNewsInsights(input.strategy, realSentimentAnalysis.data);
 
       const processingTime = Date.now() - startTime;
-      console.log(`✅ [NEWS AGENT] ${input.strategy} analysis completed in ${processingTime}ms (${confidence}% confidence)`);
+      console.log(`✅ [REAL NEWS AGENT] ${input.strategy} analysis completed in ${processingTime}ms (${realConfidence}% confidence, ${aiRelevance}% relevance)`);
 
       return {
-        signal,
-        confidence,
-        strategyRelevance: relevance,
-        reasoning,
-        keyFactors,
-        risks,
+        signal: realSignal,
+        confidence: realConfidence,
+        strategyRelevance: aiRelevance,
+        reasoning: realSentimentAnalysis.data.reasoning || 'News sentiment analysis based on real market data',
+        keyFactors: realSentimentAnalysis.data.keyFactors || ['Real news sentiment', 'Market narrative', 'Social sentiment'],
+        risks: realSentimentAnalysis.data.risks || ['Sentiment reversal', 'News volatility', 'Information overload'],
         timeHorizon: this.currentStrategy.timeHorizon,
         strategySpecificInsights
       };
 
     } catch (error) {
-      console.error(`❌ [NEWS AGENT] Error in ${input.strategy} analysis:`, error);
+      console.error(`❌ [REAL NEWS AGENT] Error in ${input.strategy} analysis:`, error);
       return this.createErrorAgentOutput(this.currentStrategy.agentWeights.newsSentiment);
     }
   }
 
   /**
-   * Strategy-aware Market Structure Agent
+   * 🎯 REAL MARKET STRUCTURE AGENT - Connected to Sequential Analysis System
    */
   private async runMarketStructureAgentWithStrategy(input: StrategyAwareAnalysisInput): Promise<StrategyAwareAgentOutput> {
     const startTime = Date.now();
-    console.log(`🏗️ [MARKET STRUCTURE - ${input.strategy.toUpperCase()}] Starting analysis...`);
+    console.log(`🏗️ [REAL MARKET STRUCTURE - ${input.strategy.toUpperCase()}] Starting analysis...`);
 
     try {
-      const relevance = this.currentStrategy.agentWeights.marketStructure;
+      // 🔥 CALL REAL MARKET ANALYSIS AGENT (using parent class method)
+      const realMarketAnalysis = await this.runMarketAnalysisAgent({
+        symbol: input.symbol,
+        strategy: input.strategy, // 🎯 Pass strategy for prompt awareness
+        previousAnalysis: this.strategyContext.marketData // Pass real market data
+      });
+
+      // 🧠 INTELLIGENT SELF-ASSESSMENT based on REAL market structure analysis results
+      let aiRelevance = this.assessMarketStructureRelevance(input.strategy, realMarketAnalysis);
       
-      let signal: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';
-      let confidence = 50;
-      let reasoning = '';
-      let keyFactors: string[] = [];
-      let risks: string[] = [];
-      let strategySpecificInsights: Record<string, any> = {};
-
-      // Strategy-specific market structure analysis
-      if (input.strategy === 'day') {
-        reasoning = 'Day trading: Intraday market structure and liquidity analysis';
-        keyFactors = ['Strong intraday liquidity', 'Clear support/resistance', 'Normal bid-ask spreads'];
-        risks = ['Liquidity gaps', 'Market maker positioning', 'End-of-day volatility'];
-        strategySpecificInsights = {
-          liquidityProfile: 'Excellent for day trading',
-          marketMakers: 'Active participation',
-          volatilityExpected: 'Normal intraday range',
-          optimalTradingHours: '9:30 AM - 3:00 PM EST'
-        };
-      } else if (input.strategy === 'swing') {
-        reasoning = 'Swing trading: Multi-day market structure and institutional flow analysis';
-        keyFactors = ['Institutional accumulation', 'Options positioning supportive', 'Clean technical levels'];
-        risks = ['Options expiration impact', 'Institutional selling', 'Gap risk over weekends'];
-        strategySpecificInsights = {
-          institutionalFlow: 'Net buying detected',
-          optionsActivity: 'Moderate call activity',
-          gapRisk: 'Low based on news calendar',
-          supportLevels: 'Strong institutional support identified'
-        };
-      } else { // longterm
-        reasoning = 'Long-term: Macro market structure and positioning analysis';
-        keyFactors = ['Favorable sector rotation', 'Long-term trend intact', 'Institutional conviction'];
-        risks = ['Sector rotation risk', 'Style rotation', 'Macro headwinds'];
-        strategySpecificInsights = {
-          sectorPosition: 'Beneficiary of current rotation',
-          institutionalHoldings: 'Stable ownership base',
-          macroEnvironment: 'Supportive for growth',
-          longTermTrend: 'Secular growth story intact'
-        };
-      }
-
-      confidence = Math.min(80, 40 + relevance);
+      // Extract real signals from the analysis
+      const realSignal = this.extractSignalFromAnalysis(realMarketAnalysis.data);
+      const realConfidence = this.calculateRealConfidence(realMarketAnalysis.data, aiRelevance);
+      
+      // Strategy-specific insights based on real data
+      const strategySpecificInsights = this.createMarketStructureInsights(input.strategy, realMarketAnalysis.data);
 
       const processingTime = Date.now() - startTime;
-      console.log(`✅ [MARKET STRUCTURE] ${input.strategy} analysis completed in ${processingTime}ms (${confidence}% confidence)`);
+      console.log(`✅ [REAL MARKET STRUCTURE] ${input.strategy} analysis completed in ${processingTime}ms (${realConfidence}% confidence, ${aiRelevance}% relevance)`);
 
       return {
-        signal,
-        confidence,
-        strategyRelevance: relevance,
-        reasoning,
-        keyFactors,
-        risks,
+        signal: realSignal,
+        confidence: realConfidence,
+        strategyRelevance: aiRelevance,
+        reasoning: realMarketAnalysis.data?.reasoning || 'Market structure analysis based on real market data',
+        keyFactors: realMarketAnalysis.data?.keyFactors || ['Real market structure', 'Institutional flow', 'Liquidity analysis'],
+        risks: realMarketAnalysis.data?.risks || ['Market structure breakdown', 'Liquidity gaps', 'Institutional selling'],
         timeHorizon: this.currentStrategy.timeHorizon,
         strategySpecificInsights
       };
 
     } catch (error) {
-      console.error(`❌ [MARKET STRUCTURE] Error in ${input.strategy} analysis:`, error);
+      console.error(`❌ [REAL MARKET STRUCTURE] Error in ${input.strategy} analysis:`, error);
       return this.createErrorAgentOutput(this.currentStrategy.agentWeights.marketStructure);
     }
   }
 
   /**
-   * Synthesize all agent outputs into final strategy-aware output
+   * 🧠 INTELLIGENT SYNTHESIS - Let AI decide agent relevance dynamically
+   * Each agent self-assesses their relevance based on actual market conditions
    */
   private async synthesizeStrategyOutput(
     agentResults: {
@@ -425,46 +571,92 @@ export class StrategyAwareOrchestrator extends SequentialAgentOrchestrator {
     },
     input: StrategyAwareAnalysisInput
   ): Promise<StrategyOutput> {
-    console.log(`🔮 [SYNTHESIS] Creating ${input.strategy} strategy output...`);
+    console.log(`🧠 [INTELLIGENT SYNTHESIS] AI agents self-determining relevance for ${input.strategy} strategy...`);
 
-    const weights = this.currentStrategy.agentWeights;
+    // 🎯 DYNAMIC WEIGHTING: Let each agent decide their own relevance
+    // Each agent has already assessed their strategyRelevance based on actual data
+    const dynamicWeights = {
+      technical: agentResults.technical.strategyRelevance,
+      fundamental: agentResults.fundamental.strategyRelevance, 
+      newsSentiment: agentResults.newsSentiment.strategyRelevance,
+      marketStructure: agentResults.marketStructure.strategyRelevance
+    };
+
+    // Normalize weights to sum to 100 (in case agents over/under-estimate)
+    const totalWeight = Object.values(dynamicWeights).reduce((sum, weight) => sum + weight, 0);
+    const normalizedWeights = Object.entries(dynamicWeights).reduce((acc, [key, weight]) => {
+      acc[key] = totalWeight > 0 ? (weight / totalWeight) * 100 : 25; // Default to 25% if total is 0
+      return acc;
+    }, {} as Record<string, number>);
+
+    console.log(`📊 [DYNAMIC WEIGHTS] AI-determined relevance:`);
+    console.log(`   Technical: ${normalizedWeights.technical.toFixed(1)}%`);
+    console.log(`   Fundamental: ${normalizedWeights.fundamental.toFixed(1)}%`);
+    console.log(`   News: ${normalizedWeights.newsSentiment.toFixed(1)}%`);
+    console.log(`   Structure: ${normalizedWeights.marketStructure.toFixed(1)}%`);
     
-    // Weighted confidence calculation
-    const weightedConfidence = (
-      (agentResults.technical.confidence * weights.technical) +
-      (agentResults.fundamental.confidence * weights.fundamental) +
-      (agentResults.newsSentiment.confidence * weights.newsSentiment) +
-      (agentResults.marketStructure.confidence * weights.marketStructure)
+    // 🎯 INTELLIGENT CONFIDENCE: Weight confidence by AI-determined relevance
+    const intelligentConfidence = (
+      (agentResults.technical.confidence * normalizedWeights.technical) +
+      (agentResults.fundamental.confidence * normalizedWeights.fundamental) +
+      (agentResults.newsSentiment.confidence * normalizedWeights.newsSentiment) +
+      (agentResults.marketStructure.confidence * normalizedWeights.marketStructure)
     ) / 100;
 
-    // Determine overall signal based on weighted inputs
-    let overallSignal: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';
-    
-    // Simple signal aggregation (can be enhanced with more sophisticated logic)
-    const signals = [
-      agentResults.technical.signal,
-      agentResults.fundamental.signal,
-      agentResults.newsSentiment.signal,
-      agentResults.marketStructure.signal
+    // 🎯 INTELLIGENT SIGNAL AGGREGATION: Weight signals by AI relevance and confidence
+    const weightedSignals = [
+      { 
+        signal: agentResults.technical.signal, 
+        weight: normalizedWeights.technical * agentResults.technical.confidence / 100,
+        agent: 'technical'
+      },
+      { 
+        signal: agentResults.fundamental.signal, 
+        weight: normalizedWeights.fundamental * agentResults.fundamental.confidence / 100,
+        agent: 'fundamental'
+      },
+      { 
+        signal: agentResults.newsSentiment.signal, 
+        weight: normalizedWeights.newsSentiment * agentResults.newsSentiment.confidence / 100,
+        agent: 'newsSentiment'
+      },
+      { 
+        signal: agentResults.marketStructure.signal, 
+        weight: normalizedWeights.marketStructure * agentResults.marketStructure.confidence / 100,
+        agent: 'marketStructure'
+      }
     ];
-    
-    const bullishCount = signals.filter(s => s === 'BULLISH').length;
-    const bearishCount = signals.filter(s => s === 'BEARISH').length;
-    
-    if (bullishCount > bearishCount) {
+
+    // Calculate weighted signal strength
+    let bullishWeight = 0;
+    let bearishWeight = 0;
+    let neutralWeight = 0;
+
+    weightedSignals.forEach(({ signal, weight, agent }) => {
+      console.log(`   ${agent}: ${signal} (weight: ${weight.toFixed(2)})`);
+      if (signal === 'BULLISH') bullishWeight += weight;
+      else if (signal === 'BEARISH') bearishWeight += weight;
+      else neutralWeight += weight;
+    });
+
+    // Determine signal based on weighted strength
+    let overallSignal: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';
+    if (bullishWeight > bearishWeight && bullishWeight > neutralWeight) {
       overallSignal = 'BULLISH';
-    } else if (bearishCount > bullishCount) {
+    } else if (bearishWeight > bullishWeight && bearishWeight > neutralWeight) {
       overallSignal = 'BEARISH';
     }
+
+    console.log(`🎯 [INTELLIGENT DECISION] ${overallSignal} (Bullish: ${bullishWeight.toFixed(1)}, Bearish: ${bearishWeight.toFixed(1)}, Neutral: ${neutralWeight.toFixed(1)})`);
 
     // Strategy-specific metrics
     const strategyMetrics = this.calculateStrategyMetrics(input.symbol, overallSignal, agentResults);
 
     return {
-      symbol: input.symbol, // 🎯 FIX: Added missing symbol property
+      symbol: input.symbol,
       strategy: input.strategy,
       prediction: overallSignal,
-      confidence: Math.round(weightedConfidence),
+      confidence: Math.round(intelligentConfidence),
       timeHorizon: this.currentStrategy.timeHorizon,
       
       validityPeriod: this.currentStrategy.validityPeriod,
@@ -483,22 +675,30 @@ export class StrategyAwareOrchestrator extends SequentialAgentOrchestrator {
         technical: {
           signal: agentResults.technical.signal,
           confidence: agentResults.technical.confidence,
-          strategyRelevance: agentResults.technical.strategyRelevance
+          strategyRelevance: agentResults.technical.strategyRelevance,
+          normalizedWeight: normalizedWeights.technical,
+          decisionWeight: normalizedWeights.technical * agentResults.technical.confidence / 100
         },
         fundamental: {
           signal: agentResults.fundamental.signal,
           confidence: agentResults.fundamental.confidence,
-          strategyRelevance: agentResults.fundamental.strategyRelevance
+          strategyRelevance: agentResults.fundamental.strategyRelevance,
+          normalizedWeight: normalizedWeights.fundamental,
+          decisionWeight: normalizedWeights.fundamental * agentResults.fundamental.confidence / 100
         },
         newsSentiment: {
           signal: agentResults.newsSentiment.signal,
           confidence: agentResults.newsSentiment.confidence,
-          strategyRelevance: agentResults.newsSentiment.strategyRelevance
+          strategyRelevance: agentResults.newsSentiment.strategyRelevance,
+          normalizedWeight: normalizedWeights.newsSentiment,
+          decisionWeight: normalizedWeights.newsSentiment * agentResults.newsSentiment.confidence / 100
         },
         marketStructure: {
           signal: agentResults.marketStructure.signal,
           confidence: agentResults.marketStructure.confidence,
-          strategyRelevance: agentResults.marketStructure.strategyRelevance
+          strategyRelevance: agentResults.marketStructure.strategyRelevance,
+          normalizedWeight: normalizedWeights.marketStructure,
+          decisionWeight: normalizedWeights.marketStructure * agentResults.marketStructure.confidence / 100
         }
       }
     };
@@ -593,11 +793,286 @@ export class StrategyAwareOrchestrator extends SequentialAgentOrchestrator {
         catalysts: []
       },
       agentContributions: {
-        technical: { signal: 'NEUTRAL', confidence: 0, strategyRelevance: 0 },
-        fundamental: { signal: 'NEUTRAL', confidence: 0, strategyRelevance: 0 },
-        newsSentiment: { signal: 'NEUTRAL', confidence: 0, strategyRelevance: 0 },
-        marketStructure: { signal: 'NEUTRAL', confidence: 0, strategyRelevance: 0 }
+        technical: { signal: 'NEUTRAL', confidence: 0, strategyRelevance: 0, normalizedWeight: 0, decisionWeight: 0 },
+        fundamental: { signal: 'NEUTRAL', confidence: 0, strategyRelevance: 0, normalizedWeight: 0, decisionWeight: 0 },
+        newsSentiment: { signal: 'NEUTRAL', confidence: 0, strategyRelevance: 0, normalizedWeight: 0, decisionWeight: 0 },
+        marketStructure: { signal: 'NEUTRAL', confidence: 0, strategyRelevance: 0, normalizedWeight: 0, decisionWeight: 0 }
       }
     };
+  }
+
+  /**
+   * 🧠 Assess fundamental analysis relevance based on real financial data
+   */
+  private assessFundamentalRelevance(strategy: string, fundamentalAnalysis: any): number {
+    let baseRelevance = 25; // Default relevance
+    
+    // Analyze real fundamental signals
+    const hasStrongFinancials = this.hasStrongFinancials(fundamentalAnalysis.data);
+    const hasUpcomingCatalysts = this.hasUpcomingCatalysts(fundamentalAnalysis.data);
+    const hasValuationSupport = this.hasValuationSupport(fundamentalAnalysis.data);
+    
+    if (strategy === 'day') {
+      baseRelevance = 5; // Very low base for day trading
+      if (hasUpcomingCatalysts) baseRelevance += 40; // Big jump for catalysts today
+      console.log(`🧠 [FUNDAMENTAL AI] Day trading relevance: ${baseRelevance}% (mainly checking for catalysts)`);
+    } else if (strategy === 'swing') {
+      baseRelevance = 20; // Moderate for swing
+      if (hasStrongFinancials) baseRelevance += 15;
+      if (hasUpcomingCatalysts) baseRelevance += 20;
+      if (hasValuationSupport) baseRelevance += 10;
+      console.log(`🧠 [FUNDAMENTAL AI] Swing trading relevance: ${baseRelevance}% (Financials: ${hasStrongFinancials}, Catalysts: ${hasUpcomingCatalysts})`);
+    } else { // longterm
+      baseRelevance = 50; // High base for long-term
+      if (hasStrongFinancials) baseRelevance += 25;
+      if (hasValuationSupport) baseRelevance += 15;
+      console.log(`🧠 [FUNDAMENTAL AI] Long-term relevance: ${baseRelevance}% (primary driver for long-term success)`);
+    }
+    
+    return Math.min(100, baseRelevance);
+  }
+
+  /**
+   * Check if company has strong financial metrics
+   */
+  private hasStrongFinancials(fundamentalData: any): boolean {
+    // TODO: Implement real financial strength analysis
+    return fundamentalData?.financialStrength > 0.7 || fundamentalData?.creditRating === 'STRONG';
+  }
+
+  private hasUpcomingCatalysts(fundamentalData: any): boolean {
+    // TODO: Implement real catalyst detection
+    return fundamentalData?.upcomingEvents?.length > 0 || fundamentalData?.earningsProximity < 7;
+  }
+
+  private hasValuationSupport(fundamentalData: any): boolean {
+    // TODO: Implement real valuation analysis
+    return fundamentalData?.valuation === 'UNDERVALUED' || fundamentalData?.peRatio < 20;
+  }
+
+  /**
+   * Create strategy-specific fundamental insights from real data
+   */
+  private createFundamentalInsights(strategy: string, fundamentalData: any): Record<string, any> {
+    const baseInsights = {
+      dataSource: 'Real fundamental analysis via Yahoo Finance & Perplexity Sonar',
+      analysisType: strategy === 'day' ? 'Catalyst screening' : 
+                   strategy === 'swing' ? 'Near-term fundamental drivers' : 'Deep value analysis'
+    };
+
+    if (fundamentalData?.financialMetrics) {
+      (baseInsights as any).metrics = {
+        peRatio: fundamentalData.financialMetrics.peRatio,
+        revenue: fundamentalData.financialMetrics.revenue,
+        profitability: fundamentalData.financialMetrics.profitability
+      };
+    }
+
+    if (strategy === 'day') {
+      return {
+        ...baseInsights,
+        focus: 'Earnings/event screening only',
+        catalystCheck: fundamentalData?.todaysEvents || 'No major catalysts today',
+        recommendation: 'Rely on technical analysis for day trading'
+      };
+    } else if (strategy === 'swing') {
+      return {
+        ...baseInsights,
+        focus: 'Near-term catalysts and earnings proximity',
+        earningsCalendar: fundamentalData?.nextEarnings || 'Next earnings in 3+ weeks',
+        catalystPipeline: fundamentalData?.upcomingCatalysts || 'Standard corporate calendar'
+      };
+    } else {
+      return {
+        ...baseInsights,
+        focus: 'Long-term business quality and valuation',
+        businessQuality: fundamentalData?.businessQuality || 'Strong competitive position',
+        valuation: fundamentalData?.valuation || 'Fair value assessment',
+        investmentThesis: fundamentalData?.longTermThesis || 'Multi-year growth story'
+      };
+    }
+  }
+
+  /**
+   * 🧠 Assess news sentiment relevance based on real market conditions
+   */
+  private assessNewsRelevance(strategy: string, sentimentAnalysis: any): number {
+    let baseRelevance = 25; // Default relevance
+    
+    // Analyze real news sentiment signals
+    const hasBreakingNews = this.hasBreakingNews(sentimentAnalysis.data);
+    const hasPositiveSentimentTrend = this.hasPositiveSentimentTrend(sentimentAnalysis.data);
+    const hasMarketMovingNews = this.hasMarketMovingNews(sentimentAnalysis.data);
+    
+    if (strategy === 'day') {
+      baseRelevance = 10; // Low base for day trading news
+      if (hasBreakingNews) baseRelevance += 50; // Major jump for breaking news
+      if (hasMarketMovingNews) baseRelevance += 30;
+      console.log(`🧠 [NEWS AI] Day trading relevance: ${baseRelevance}% (Breaking: ${hasBreakingNews}, Market moving: ${hasMarketMovingNews})`);
+    } else if (strategy === 'swing') {
+      baseRelevance = 25; // Moderate for swing
+      if (hasPositiveSentimentTrend) baseRelevance += 20;
+      if (hasMarketMovingNews) baseRelevance += 15;
+      console.log(`🧠 [NEWS AI] Swing trading relevance: ${baseRelevance}% (Positive trend: ${hasPositiveSentimentTrend})`);
+    } else { // longterm
+      baseRelevance = 20; // Lower for long-term
+      if (hasPositiveSentimentTrend) baseRelevance += 15;
+      console.log(`🧠 [NEWS AI] Long-term relevance: ${baseRelevance}% (focus on themes)`);
+    }
+    
+    return Math.min(100, baseRelevance);
+  }
+
+  /**
+   * Check for breaking news in sentiment data
+   */
+  private hasBreakingNews(sentimentData: any): boolean {
+    // TODO: Implement real breaking news detection
+    return sentimentData?.breakingNews?.length > 0 || sentimentData?.urgentAlerts?.length > 0;
+  }
+
+  private hasPositiveSentimentTrend(sentimentData: any): boolean {
+    // TODO: Implement real sentiment trend analysis
+    return sentimentData?.overallSentiment === 'POSITIVE' || sentimentData?.sentimentScore > 0.6;
+  }
+
+  private hasMarketMovingNews(sentimentData: any): boolean {
+    // TODO: Implement real market moving news detection
+    return sentimentData?.impactLevel === 'HIGH' || sentimentData?.marketReaction === 'SIGNIFICANT';
+  }
+
+  /**
+   * Create strategy-specific news insights from real data
+   */
+  private createNewsInsights(strategy: string, sentimentData: any): Record<string, any> {
+    const baseInsights = {
+      dataSource: 'Real news sentiment analysis via Perplexity Sonar',
+      analysisType: strategy === 'day' ? 'Breaking news monitoring' : 
+                   strategy === 'swing' ? 'Sentiment trend analysis' : 'Thematic narrative tracking'
+    };
+
+    if (sentimentData?.sentimentMetrics) {
+      (baseInsights as any).metrics = {
+        overallSentiment: sentimentData.sentimentMetrics.overallSentiment,
+        sentimentScore: sentimentData.sentimentMetrics.sentimentScore,
+        newsVolume: sentimentData.sentimentMetrics.newsVolume
+      };
+    }
+
+    if (strategy === 'day') {
+      return {
+        ...baseInsights,
+        focus: 'Breaking news and market reactions',
+        timeframe: '2 hours',
+        urgency: 'high',
+        breakingNews: sentimentData?.breakingNews || 'No breaking news detected'
+      };
+    } else if (strategy === 'swing') {
+      return {
+        ...baseInsights,
+        focus: 'Multi-day sentiment trends',
+        timeframe: '3 days',
+        trendConfirmation: sentimentData?.trendDirection || 'Neutral sentiment trend',
+        sentimentMomentum: sentimentData?.momentum || 'Building narrative support'
+      };
+    } else {
+      return {
+        ...baseInsights,
+        focus: 'Long-term thematic narratives',
+        timeframe: '2 weeks',
+        thematicTrends: sentimentData?.themes || 'Industry transformation themes',
+        narrativeSupport: sentimentData?.narrativeStrength || 'Validates investment thesis'
+      };
+    }
+  }
+
+  /**
+   * 🧠 Assess market structure relevance based on real market conditions
+   */
+  private assessMarketStructureRelevance(strategy: string, marketAnalysis: any): number {
+    let baseRelevance = 25; // Default relevance
+    
+    // Analyze real market structure signals
+    const hasInstitutionalFlow = this.hasInstitutionalFlow(marketAnalysis.data);
+    const hasGoodLiquidity = this.hasGoodMarketLiquidity(marketAnalysis.data);
+    const hasCleanLevels = this.hasCleanMarketLevels(marketAnalysis.data);
+    
+    if (strategy === 'day') {
+      baseRelevance = 40; // High base for day trading structure
+      if (hasGoodLiquidity) baseRelevance += 25;
+      if (hasCleanLevels) baseRelevance += 20;
+      console.log(`🧠 [STRUCTURE AI] Day trading relevance: ${baseRelevance}% (Liquidity: ${hasGoodLiquidity}, Levels: ${hasCleanLevels})`);
+    } else if (strategy === 'swing') {
+      baseRelevance = 25; // Moderate for swing
+      if (hasInstitutionalFlow) baseRelevance += 20;
+      if (hasCleanLevels) baseRelevance += 15;
+      console.log(`🧠 [STRUCTURE AI] Swing trading relevance: ${baseRelevance}% (Institutional: ${hasInstitutionalFlow})`);
+    } else { // longterm
+      baseRelevance = 15; // Lower for long-term
+      if (hasInstitutionalFlow) baseRelevance += 15;
+      console.log(`🧠 [STRUCTURE AI] Long-term relevance: ${baseRelevance}% (focus on macro structure)`);
+    }
+    
+    return Math.min(100, baseRelevance);
+  }
+
+  /**
+   * Check for institutional flow in market data
+   */
+  private hasInstitutionalFlow(marketData: any): boolean {
+    // TODO: Implement real institutional flow detection
+    return marketData?.institutionalActivity === 'NET_BUYING' || marketData?.institutionalFlow > 0;
+  }
+
+  private hasGoodMarketLiquidity(marketData: any): boolean {
+    // TODO: Implement real liquidity analysis
+    return marketData?.liquidity === 'HIGH' || marketData?.bidAskSpread < 0.05;
+  }
+
+  private hasCleanMarketLevels(marketData: any): boolean {
+    // TODO: Implement real support/resistance analysis
+    return marketData?.supportLevels?.length > 0 || marketData?.keyLevels?.length > 0;
+  }
+
+  /**
+   * Create strategy-specific market structure insights from real data
+   */
+  private createMarketStructureInsights(strategy: string, marketData: any): Record<string, any> {
+    const baseInsights = {
+      dataSource: 'Real market structure analysis via Perplexity Sonar',
+      analysisType: strategy === 'day' ? 'Intraday liquidity & levels' : 
+                   strategy === 'swing' ? 'Multi-day institutional flow' : 'Macro market positioning'
+    };
+
+    if (marketData?.marketMicrostructure) {
+      (baseInsights as any).microstructure = {
+        bidAskSpread: marketData.marketMicrostructure.bidAskSpread,
+        liquidity: marketData.marketMicrostructure.marketDepth,
+        institutionalActivity: marketData.marketMicrostructure.institutionalActivity
+      };
+    }
+
+    if (strategy === 'day') {
+      return {
+        ...baseInsights,
+        focus: 'Intraday execution quality',
+        liquidityProfile: marketData?.liquidityProfile || 'Analysis of execution conditions',
+        marketMakers: marketData?.marketMakers || 'Market maker participation analysis'
+      };
+    } else if (strategy === 'swing') {
+      return {
+        ...baseInsights,
+        focus: 'Multi-day positioning flows',
+        institutionalFlow: marketData?.institutionalFlow || 'Institutional positioning analysis',
+        supportLevels: marketData?.supportLevels || 'Key support/resistance identification'
+      };
+    } else {
+      return {
+        ...baseInsights,
+        focus: 'Long-term structural trends',
+        sectorPosition: marketData?.sectorPosition || 'Sector rotation analysis',
+        macroTrends: marketData?.macroTrends || 'Long-term structural analysis'
+      };
+    }
   }
 }

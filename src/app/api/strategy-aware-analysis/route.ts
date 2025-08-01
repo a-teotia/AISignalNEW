@@ -151,7 +151,67 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Return strategy configuration information
+    const { searchParams } = new URL(request.url);
+    const fetchHistory = searchParams.get('history');
+    
+    // If requesting analysis history
+    if (fetchHistory === 'true') {
+      const { getServerSession } = await import('next-auth');
+      const { authOptions } = await import('@/lib/auth');
+      const { db } = await import('@/lib/database');
+      
+      const symbol = searchParams.get('symbol');
+      const limit = parseInt(searchParams.get('limit') || '10');
+      
+      // Get user session
+      const session = await getServerSession(authOptions);
+      if (!session || !session.user?.email) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      
+      const user_id = session.user.email;
+      
+      // Get analysis history from database
+      const predictions = symbol ? 
+        db.getPredictionsBySymbol(user_id, symbol, limit) :
+        db.getPredictionsWithResults(user_id, '', limit);
+      
+      // Transform data to include strategy-aware information
+      const transformedAnalyses = predictions.map((analysis: any) => ({
+        id: analysis.id,
+        symbol: analysis.symbol,
+        timestamp: analysis.timestamp,
+        verdict: analysis.verdict,
+        confidence: analysis.confidence,
+        reasoning: analysis.reasoning,
+        priceTarget: analysis.analysisDetails?.priceTarget,
+        strategy: analysis.strategy || 'swing', // Default to swing if not specified
+        agentChain: analysis.analysisDetails?.agentChain || [
+          'StrategyConfiguration', 'TechnicalAnalysis', 'FundamentalAnalysis', 
+          'NewsSentiment', 'MarketStructure', 'FinalSynthesis'
+        ],
+        fullAnalysis: {
+          executiveSummary: analysis.analysisDetails?.executiveSummary || analysis.reasoning,
+          finalVerdict: analysis.analysisDetails?.finalVerdict || {
+            direction: analysis.verdict,
+            confidence: analysis.confidence,
+            reasoning: analysis.reasoning
+          },
+          strategyAnalysis: analysis.analysisDetails?.strategyAnalysis || {
+            strategy: analysis.strategy || 'swing',
+            agentWeights: {}
+          }
+        }
+      }));
+      
+      return NextResponse.json({
+        success: true,
+        analysisHistory: transformedAnalyses,
+        totalCount: predictions.length
+      });
+    }
+    
+    // Default: Return strategy configuration information
     const { STRATEGY_CONFIGS } = await import('@/lib/types/trading-strategy-types');
     
     return NextResponse.json({
@@ -165,7 +225,7 @@ export async function GET(request: NextRequest) {
     console.error('❌ [STRATEGY API] GET Error:', error);
     return NextResponse.json({
       success: false,
-      error: 'Failed to load strategy configurations'
+      error: 'Failed to load strategy configurations or analysis history'
     }, { status: 500 });
   }
 }

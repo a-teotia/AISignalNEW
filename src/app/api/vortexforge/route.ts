@@ -5,7 +5,7 @@ import { db } from '@/lib/database';
 
 export async function POST(req: NextRequest) {
   return NextResponse.json({ 
-    error: 'VortexForge agent disabled - use /api/sequential-analysis instead' 
+    error: 'VortexForge agent disabled - use /api/strategy-aware-analysis instead' 
   }, { status: 410 });
   
   /* try {

@@ -36,7 +36,7 @@ interface AnalysisResult {
 
 const SequentialAnalysisCard: React.FC<SequentialAnalysisCardProps> = ({
   symbol,
-  tradingStrategy = 'day', // Changed from 'swing' to 'day' to match dashboard default
+  tradingStrategy = 'swing', // Default to swing to match dashboard default
   onAnalysisComplete
 }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);

@@ -82,21 +82,29 @@ export interface StrategyOutput {
       signal: string;
       confidence: number;
       strategyRelevance: number; // How relevant for this strategy (0-100)
+      normalizedWeight: number;  // Weight after normalization (0-100)
+      decisionWeight: number;    // Final weight used in decision logic
     };
     fundamental: {
       signal: string;
       confidence: number;
       strategyRelevance: number;
+      normalizedWeight: number;
+      decisionWeight: number;
     };
     newsSentiment: {
       signal: string;
       confidence: number;
       strategyRelevance: number;
+      normalizedWeight: number;
+      decisionWeight: number;
     };
     marketStructure: {
       signal: string;
       confidence: number;
       strategyRelevance: number;
+      normalizedWeight: number;
+      decisionWeight: number;
     };
   };
 }
